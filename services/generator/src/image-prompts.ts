@@ -63,11 +63,7 @@ export function generateImagePrompts(
     
     for (let i = 0; i < 3; i++) {
       const variantType = VARIANT_TYPES[i];
-<<<<<<< HEAD
-      const variantSeed = deriveSeed(hookSeed, `variant-${i}-${variantType}`);
-=======
       const variantSeed = deriveSeed(hookSeed, `variant-${i}`);
->>>>>>> m5d-exporter
       const variantRng = createRng(variantSeed);
       
       const variant = generateImagePromptVariant({
@@ -150,37 +146,12 @@ function generateStyleTokens(params: {
   // Add device-specific tokens
   const deviceTokens = getDeviceTokens(device);
   
-<<<<<<< HEAD
-  // Create variant-specific token pools to ensure variety
-  const variantSpecificTokens = {
-    macro: ["intricate", "detailed", "crystal clear", "fine details", "sharp focus", "professional"],
-    "human-in-use": ["authentic", "natural pose", "genuine smile", "comfortable", "relaxed", "focused"],
-    "wide-context": ["environmental", "contextual", "atmospheric", "immersive", "spacious", "panoramic"]
-  };
-  
-  const additionalTokens = [
-    "vibrant", "dynamic", "elegant", "modern", "clean", "minimalist",
-    "bold", "subtle", "dramatic", "peaceful", "energetic", "calm",
-    "sophisticated", "playful", "serious", "warm", "cool", "neutral",
-    "textured", "smooth", "rough", "glossy", "matte", "satin"
-  ];
-  
-  // Combine tokens with variant-specific emphasis
-  const variantTokens = variantSpecificTokens[variantType] || [];
-  const allTokens = [...baseTokens, ...lightingTokens, ...deviceTokens, ...variantTokens, ...additionalTokens];
-  
-  // Remove duplicates and select tokens
-  const uniqueTokens = [...new Set(allTokens)];
-  const tokenCount = 6 + Math.floor(rng() * 3); // 6-8 tokens
-  const selectedTokens = shuffleArray(rng, uniqueTokens).slice(0, tokenCount);
-=======
   // Combine and select tokens ensuring variety
   const allTokens = [...baseTokens, ...lightingTokens, ...deviceTokens];
   
   // Select 8-12 tokens to ensure ≥6 token difference between variants
   const tokenCount = 8 + Math.floor(rng() * 5); // 8-12 tokens
   const selectedTokens = shuffleArray(rng, allTokens).slice(0, tokenCount);
->>>>>>> m5d-exporter
   
   return selectedTokens;
 }
