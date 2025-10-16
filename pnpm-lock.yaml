@@ -244,6 +244,9 @@ importers:
 
   services/orchestrator:
     dependencies:
+      '@slate/andronoma-adapter':
+        specifier: workspace:*
+        version: link:../andronoma-adapter
       '@slate/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types

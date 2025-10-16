@@ -13,6 +13,7 @@
                     "typecheck":  "tsc --noEmit"
                 },
     "dependencies":  {
+                         "@slate/andronoma-adapter":  "workspace:*",
                          "@slate/api-types":  "workspace:*",
                          "@slate/business-rules":  "workspace:*",
                          "@slate/exporter":  "workspace:*",

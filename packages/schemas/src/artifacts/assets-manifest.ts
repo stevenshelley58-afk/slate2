@@ -21,6 +21,16 @@ export const AssetsManifestRecordSchema = withSchemaVersion(
       Type.Literal("user-owned"),
       Type.Literal("licensed"),
     ]),
+    created_at: Type.String({ format: "date-time" }),
+    file_size: Type.Integer({ minimum: 0 }),
+    dimensions: Type.Object({
+      width: Type.Integer({ minimum: 1 }),
+      height: Type.Integer({ minimum: 1 }),
+    }),
+    prompt_id: Type.Optional(Type.String({ minLength: 1 })),
+    style_category: Type.Optional(Type.String({ minLength: 1 })),
+    color_scheme: Type.Optional(Type.String({ minLength: 1 })),
+    composition_type: Type.Optional(Type.String({ minLength: 1 })),
   }),
 );
 
