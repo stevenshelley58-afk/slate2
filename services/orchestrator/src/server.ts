@@ -6,14 +6,9 @@ import {
   type RunStage,
 } from "@slate/state-machine";
 import { RunSummarySchema, RunStageLiteral } from "@slate/api-types";
-import {
-  STYLE_RULES,
-  NOVELTY_FLOORS,
-  DISTANCE_THRESHOLDS,
-  SSR_GATES,
-} from "@slate/business-rules";
 import { InMemoryRunStore } from "./run-store.js";
 import { logger } from "./logger.js";
+import { THRESHOLD_SNAPSHOT } from "./thresholds.js";
 
 const fastify = Fastify({
   logger,
@@ -138,14 +133,7 @@ fastify.get("/runs/:runId/ssr", async (request, reply) => {
       run_id: runId,
       anchor_set_version: snapshot.anchorSetVersion,
       andronoma_request_id: `andronoma-${runId}-${Date.now()}`,
-      thresholds: {
-        relevance_mean_min: SSR_GATES.relevanceMeanMin,
-        ks_min: SSR_GATES.ksMin,
-        entropy_min: SSR_GATES.entropyMin,
-        entropy_coverage: SSR_GATES.entropyCoverage,
-        bimodal_share: SSR_GATES.bimodalShare,
-        separation_min: SSR_GATES.separationMin,
-      },
+      thresholds: THRESHOLD_SNAPSHOT.ssr,
       summary: {
         total_combinations: summary.total_combinations,
         passed_gates: summary.passed_gates,
@@ -184,27 +172,7 @@ fastify.get("/segments", async (request, reply) => {
     const segments = runStore.getSegments(runId);
     return {
       run_id: runId,
-      thresholds: {
-        style_rules: {
-          first_line_max_words: STYLE_RULES.firstLineMaxWords,
-        },
-        novelty: {
-          idea_floor: NOVELTY_FLOORS.idea,
-          copy_floor: NOVELTY_FLOORS.copy,
-        },
-        distance: {
-          hook: DISTANCE_THRESHOLDS.hook,
-          cross_run: DISTANCE_THRESHOLDS.cross_run,
-        },
-        ssr: {
-          relevance_mean_min: SSR_GATES.relevanceMeanMin,
-          ks_min: SSR_GATES.ksMin,
-          entropy_min: SSR_GATES.entropyMin,
-          entropy_coverage: SSR_GATES.entropyCoverage,
-          bimodal_share: SSR_GATES.bimodalShare,
-          separation_min: SSR_GATES.separationMin,
-        },
-      },
+      thresholds: THRESHOLD_SNAPSHOT,
       segments,
     };
   } catch (error) {
@@ -229,14 +197,7 @@ fastify.get("/runs/:runId/ssr", async (request, reply) => {
     
     return {
       run_id: runId,
-      thresholds: {
-        relevance_mean_min: SSR_GATES.relevanceMeanMin,
-        ks_min: SSR_GATES.ksMin,
-        entropy_min: SSR_GATES.entropyMin,
-        entropy_coverage: SSR_GATES.entropyCoverage,
-        bimodal_share: SSR_GATES.bimodalShare,
-        separation_min: SSR_GATES.separationMin,
-      },
+      thresholds: THRESHOLD_SNAPSHOT.ssr,
       summary: {
         total_combinations: ssrData.total_combinations,
         passed_gates: ssrData.passed_gates,
