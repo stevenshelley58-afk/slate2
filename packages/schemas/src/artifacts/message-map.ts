@@ -20,7 +20,7 @@ const MessageMapCore = Type.Object({
 export const MessageMapRecordSchema = withSchemaVersion(MessageMapCore);
 
 export const MessageMapRecordZ = z.object({
-  schema_version: z.literal("0.1.0"),
+  schema_version: z.literal("0.2.0"),
   segment_id: z.string().min(1),
   problem: z.string().min(1),
   objection: z.string().min(1),

@@ -35,6 +35,7 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
 
   machine.registerHandler("personas", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Generating personas");
+    const weight = Number((0.33 + rng() * 0.2).toFixed(2));
     const persona: PersonaRecord = {
       schema_version: schemaVersionLiteral,
       persona_id: `${ctx.runId}-persona-1`,
@@ -46,7 +47,8 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
       price_sensitivity: "medium",
       confidence_level: Number((0.72 + rng() * 0.1).toFixed(2)),
       evidence_refs: ["pdp#logistics", "faq#restock-window"],
-      weight: Number((0.33 + rng() * 0.2).toFixed(2)),
+      weight,
+      audience_prior: 1,
     };
 
     appendJsonlArtifact(runtime, ctx.runId, "personas", [persona]);
@@ -287,6 +289,7 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
         width: 1080,
         height: 1920,
       },
+      accessibility_pass: true,
     };
     appendJsonArtifact(
       runtime,

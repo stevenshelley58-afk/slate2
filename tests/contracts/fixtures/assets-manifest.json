@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.2.0",
+  "asset_id": "asset-vid-1",
+  "segment_id": "segment-retention",
+  "archetype": "problem-solution",
+  "hook_id": "segment-retention-hook-1",
+  "ratio": "9:16",
+  "variant": "alpha",
+  "filename": "assets/segment-retention-alpha.mp4",
+  "checksum": "9f1c2e7b18d54010",
+  "license_tag": "generated",
+  "created_at": "2024-05-18T12:34:56.000Z",
+  "file_size": 734003,
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "prompt_id": "prompt-segment-retention-1",
+  "style_category": "bold",
+  "color_scheme": "warm",
+  "composition_type": "layered",
+  "accessibility_pass": true
+}
