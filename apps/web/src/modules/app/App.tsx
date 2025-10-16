@@ -76,6 +76,21 @@ function HomePage() {
               </a>
             </div>
           </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              SSR Gates Analysis
+            </h2>
+            <p className="text-gray-600 mb-4">
+              View SSR quality gates and thresholds for statistical significance reporting.
+            </p>
+            <a
+              href="/runs/demo-run-123/ssr"
+              className="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+            >
+              View SSR Gates
+            </a>
+          </div>
         </div>
       </div>
     </div>
