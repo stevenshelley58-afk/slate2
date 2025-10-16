@@ -119,13 +119,6 @@ function SsrGatesPage() {
   // Extract runId from URL - in a real app, this would come from useParams
   const runId = window.location.pathname.split('/runs/')[1]?.split('/ssr')[0] || 'demo-run-123';
   
-  return <SsrGatesView runId={runId} />;
-}
-
-function SsrGatesPage() {
-  // Extract runId from URL - in a real app, this would come from useParams
-  const runId = window.location.pathname.split('/runs/')[1]?.split('/')[0] || 'demo-run-123';
-  
   // Mock metrics for demonstration - in real app this would come from API
   const mockMetrics = {
     relevanceMean: 4.2,
