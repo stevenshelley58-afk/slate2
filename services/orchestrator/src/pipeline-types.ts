@@ -1,5 +1,12 @@
 import type { RunContext, RunStage } from "@slate/state-machine";
-import type { HookRecord, MessageMapRecord } from "@slate/schemas";
+import type {
+  HookRecord,
+  MessageMapRecord,
+  PromptRecord,
+  ImagePromptRecord,
+  QaReport,
+} from "@slate/schemas";
+import type { AccessibilityReport, StoryboardRecord } from "@slate/qa-service";
 
 export type ArtifactEnvelope = {
   stage: RunStage;
@@ -23,4 +30,9 @@ export type PipelineRuntime = {
   segments: SegmentSummary[];
   maps: MessageMapRecord[];
   hooks: HookRecord[];
+  prompts: PromptRecord[];
+  imagePrompts: ImagePromptRecord[];
+  storyboards: StoryboardRecord[];
+  qaReport?: QaReport;
+  accessibilityReport?: AccessibilityReport;
 };

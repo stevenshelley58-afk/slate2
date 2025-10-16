@@ -57,6 +57,9 @@ export class InMemoryRunStore {
       segments: [],
       maps: [],
       hooks: [],
+      prompts: [],
+      imagePrompts: [],
+      storyboards: [],
     };
 
     registerPipeline(machine, runtime);
