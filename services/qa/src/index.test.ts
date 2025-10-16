@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { generateQaReport } from "./index.js";
-import type { HookRecord } from "@slate/schemas";
+import { generateQaArtifacts, type StoryboardRecord } from "./index.js";
+import type { HookRecord, PromptRecord, ImagePromptRecord } from "@slate/schemas";
 
 describe("QA Service", () => {
   const mockHooks: HookRecord[] = [
@@ -39,88 +39,150 @@ describe("QA Service", () => {
     },
   ];
 
-  it("should generate QA report with all checks", () => {
-    const result = generateQaReport({
+  const mockPrompts: PromptRecord[] = [
+    {
+      schema_version: "0.1.0",
+      prompt_id: "prompt-1",
+      stage: "creative",
+      model: "gpt-test",
+      model_revision: "v1",
+      input_tokens: 128,
+      output_tokens: 256,
+      prompt_text: "Generate supporting copy for grocery savings",
+      response_ref: "resp-1",
+      created_at: new Date().toISOString(),
+    },
+    {
+      schema_version: "0.1.0",
+      prompt_id: "prompt-2",
+      stage: "creative",
+      model: "gpt-test",
+      model_revision: "v1",
+      input_tokens: 0,
+      output_tokens: 0,
+      prompt_text: "Craft celebrity inspired grocery tips",
+      response_ref: "resp-2",
+      created_at: new Date().toISOString(),
+    },
+  ];
+
+  const mockImagePrompts: ImagePromptRecord[] = [
+    {
+      schema_version: "0.1.0",
+      prompt_id: "img-1",
+      segment_id: "segment-1",
+      archetype: "photorealistic",
+      hook_id: "hook-1",
+      variant: "A",
+      aspect_ratio: "9:16",
+      prompt_text: "Photorealistic portrait of a celebrity chef holding groceries",
+      style_category: "photorealistic",
+      color_scheme: "complementary",
+      composition_type: "centered",
+      visual_elements: ["product", "text-overlay"],
+      model: "image-test",
+      model_revision: "v1",
+      input_tokens: 120,
+      output_tokens: 512,
+      generated_image_ref: "segment-1-photorealistic-A.png",
+      created_at: new Date().toISOString(),
+      metadata: { seed: 42 },
+    },
+    {
+      schema_version: "0.1.0",
+      prompt_id: "img-2",
+      segment_id: "segment-1",
+      archetype: "illustration",
+      hook_id: "hook-1",
+      variant: "B",
+      aspect_ratio: "1:1",
+      prompt_text: "Playful illustrated basket of groceries",
+      style_category: "illustration",
+      color_scheme: "analogous",
+      composition_type: "rule-of-thirds",
+      visual_elements: ["product", "background"],
+      model: "image-test",
+      model_revision: "v1",
+      input_tokens: 140,
+      output_tokens: 480,
+      generated_image_ref: "segment-1-illustration-B.png",
+      created_at: new Date().toISOString(),
+      metadata: { seed: 43 },
+    },
+  ];
+
+  const mockStoryboards: StoryboardRecord[] = [
+    {
+      storyboard_id: "story-1",
+      hook_id: "hook-1",
+      frames: [
+        {
+          frame_id: "story-1-frame-1",
+          sequence: 1,
+          overlay_text: "Stretch every grocery dollar",
+          voiceover: "Stretch every grocery dollar",
+          accessibility: { safe_area: true, captions: true, contrast_ratio: 4.8 },
+        },
+        {
+          frame_id: "story-1-frame-2",
+          sequence: 2,
+          overlay_text: "",
+          voiceover: "See how",
+          accessibility: { safe_area: false, captions: false, contrast_ratio: 4.1 },
+        },
+      ],
+    },
+  ];
+
+  it("should generate QA artifacts with combined coverage", () => {
+    const result = generateQaArtifacts({
       runId: "test-run-123",
-      hooks: mockHooks,
+      copy: mockHooks,
+      prompts: mockPrompts,
+      imagePrompts: mockImagePrompts,
+      storyboards: mockStoryboards,
     });
 
-    expect(result.filename).toBe("test-run-123-qa_report.json");
-    
-    const report = JSON.parse(result.body);
+    expect(result.qaReport.filename).toBe("test-run-123-qa_report.json");
+    expect(result.nearDuplicateReport.filename).toBe("test-run-123-near_duplicate_report.csv");
+    expect(result.accessibilityReport.filename).toBe("test-run-123-accessibility_report.json");
+
+    const report = JSON.parse(result.qaReport.body);
     expect(report.schema_version).toBeDefined();
     expect(report.run_id).toBe("test-run-123");
-    expect(report.generated_at).toBeDefined();
-    expect(report.summary).toBeDefined();
-    expect(report.checks).toBeDefined();
-    expect(Array.isArray(report.checks)).toBe(true);
+    expect(report.checks.length).toBeGreaterThan(0);
+
+    const accessibility = JSON.parse(result.accessibilityReport.body);
+    expect(accessibility.totals.frames).toBe(2);
+    expect(accessibility.totals.failing).toBe(1);
   });
 
-  it("should detect atomicity violations", () => {
-    const result = generateQaReport({
-      runId: "test-run-atomicity",
-      hooks: [mockHooks[1]], // Contains "click here" and "find out"
+  it("should detect atomicity and legal violations in copy", () => {
+    const { summary } = generateQaArtifacts({
+      runId: "test-run-atomic",
+      copy: [mockHooks[1]],
+      prompts: [],
+      imagePrompts: [],
+      storyboards: [],
     });
 
-    const report = JSON.parse(result.body);
-    const atomicityCheck = report.checks.find((check: any) => 
-      check.check_id === "hook-2-atomicity"
-    );
-    
-    expect(atomicityCheck).toBeDefined();
-    expect(atomicityCheck.status).toBe("fail");
-    expect(atomicityCheck.message).toContain("external references");
+    const atomicityCheck = summary.checks.find((check) => check.check_id === "hook-2-atomicity");
+    expect(atomicityCheck?.status).toBe("fail");
+
+    const legalCheck = summary.checks.find((check) => check.check_id === "hook-2-legal");
+    expect(legalCheck?.status).toBe("fail");
   });
 
-  it("should detect banlist violations", () => {
-    const result = generateQaReport({
-      runId: "test-run-banlist",
-      hooks: [mockHooks[2]], // Contains multiple banlist terms
+  it("should mark likeness issues for photorealistic prompts", () => {
+    const { summary } = generateQaArtifacts({
+      runId: "test-run-likeness",
+      copy: [],
+      prompts: [],
+      imagePrompts: [mockImagePrompts[0]],
+      storyboards: [],
     });
 
-    const report = JSON.parse(result.body);
-    const banlistCheck = report.checks.find((check: any) => 
-      check.check_id === "hook-3-banlist"
-    );
-    
-    expect(banlistCheck).toBeDefined();
-    expect(banlistCheck.status).toBe("fail");
-    expect(banlistCheck.message).toContain("Banlist terms detected");
-  });
-
-  it("should detect legal risk violations", () => {
-    const result = generateQaReport({
-      runId: "test-run-legal",
-      hooks: [mockHooks[1]], // Has legal_risk
-    });
-
-    const report = JSON.parse(result.body);
-    const legalCheck = report.checks.find((check: any) => 
-      check.check_id === "hook-2-legal-tags"
-    );
-    
-    expect(legalCheck).toBeDefined();
-    expect(legalCheck.status).toBe("fail");
-    expect(legalCheck.message).toContain("Legal risks identified");
-  });
-
-  it("should pass all checks for clean hooks", () => {
-    const result = generateQaReport({
-      runId: "test-run-clean",
-      hooks: [mockHooks[0]], // Clean hook
-    });
-
-    const report = JSON.parse(result.body);
-    const checks = report.checks.filter((check: any) => 
-      check.check_id.startsWith("hook-1-")
-    );
-    
-    // Should have atomicity, accessibility, banlist, legal-tags, thin-site-fallback, and similarity checks
-    expect(checks.length).toBe(6);
-    
-    // All individual checks should pass
-    checks.forEach((check: any) => {
-      expect(check.status).toBe("pass");
-    });
+    const likenessCheck = summary.checks.find((check) => check.check_id === "img-1-likeness");
+    expect(likenessCheck?.status).toBe("fail");
   });
 });
