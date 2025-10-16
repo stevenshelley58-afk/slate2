@@ -31,6 +31,9 @@ export const AssetsManifestRecordSchema = withSchemaVersion(
     style_category: Type.Optional(Type.String({ minLength: 1 })),
     color_scheme: Type.Optional(Type.String({ minLength: 1 })),
     composition_type: Type.Optional(Type.String({ minLength: 1 })),
+    accessibility_pass: Type.Boolean({
+      description: "Indicates whether the paired hook cleared automated accessibility checks.",
+    }),
   }),
 );
 

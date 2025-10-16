@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.2.0",
+  "persona_id": "persona-ops-1",
+  "name": "Operations Optimizer",
+  "jtbd": "Reduce operational waste across fulfillment workflows.",
+  "context": "Leads fulfillment for a fast-growing ecommerce collective.",
+  "trigger": "Seasonal campaign exposes fragility in replenishment cadence.",
+  "blocker": "Manual spreadsheets hide low-stock variants and delays.",
+  "price_sensitivity": "medium",
+  "confidence_level": 0.78,
+  "evidence_refs": ["scrape:ops-case-study", "scrape:inventory-qa"],
+  "weight": 1.6,
+  "audience_prior": 0.4
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": "0.2.0",
+  "cluster_id": "cluster-1",
+  "centroid": [0.41, 0.56, 0.63],
+  "member_persona_ids": ["persona-ops-1", "persona-growth-2"],
+  "avg_cosine": 0.86,
+  "size": 2,
+  "silhouette": 0.53,
+  "min_spacing": 0.18
+}

@@ -64,16 +64,28 @@ export function generatePersonas(
         new Set(selectEvidenceRefs(scrape.evidence, rng, index, draft.evidence_refs)),
       ),
       weight: Math.max(draft.weight, 0),
+      audience_prior: 0,
     };
-
-    if (!PersonaRecordSchema.Check(persona)) {
-      throw new Error("Generated persona failed schema validation");
-    }
 
     return persona;
   });
 
-  return personas;
+  const totalWeight = personas.reduce((sum, persona) => sum + persona.weight, 0);
+
+  return personas.map((persona) => {
+    const normalizedPrior = totalWeight > 0 ? persona.weight / totalWeight : 0;
+    const audience_prior = clamp(normalizedPrior, 0, 1);
+    const personaWithPrior: PersonaRecord = {
+      ...persona,
+      audience_prior,
+    };
+
+    if (!PersonaRecordSchema.Check(personaWithPrior)) {
+      throw new Error("Generated persona failed schema validation");
+    }
+
+    return personaWithPrior;
+  });
 }
 
 function buildPersonaDrafts(scrape: ScrapeAttributes, rng: ReturnType<typeof createRng>) {

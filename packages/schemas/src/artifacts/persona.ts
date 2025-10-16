@@ -26,6 +26,11 @@ const PersonaCore = Type.Object({
     minimum: 0,
     description: "Relative importance weight used for segment scoring.",
   }),
+  audience_prior: Type.Number({
+    minimum: 0,
+    maximum: 1,
+    description: "Normalized share of audience volume represented by this persona.",
+  }),
 });
 
 export const PersonaRecordSchema = withSchemaVersion(PersonaCore);
