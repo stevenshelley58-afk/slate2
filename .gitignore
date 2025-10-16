@@ -1,0 +1,26 @@
+# Node
+node_modules/
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temp
+tmp/
+*.tmp
