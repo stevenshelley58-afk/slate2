@@ -1,145 +1,295 @@
-import { RunStateMachine } from "@slate/state-machine";
+import { mkdirSync, writeFileSync } from "fs";
+import { join } from "path";
+import { RunStateMachine, type RunStage } from "@slate/state-machine";
 import {
   schemaVersionLiteral,
-  type HookRecord,
-  type BriefRecord,
+  type PersonaRecord,
+  type SsrConfig,
+  type AssetsManifestRecord,
 } from "@slate/schemas";
 import {
-  enforceCoverage,
-  enforceHookStructure,
-  enforceDistance,
-  enforceBrief,
+  STYLE_RULES,
+  NOVELTY_FLOORS,
+  DISTANCE_THRESHOLDS,
 } from "@slate/business-rules";
+import {
+  generateMessageMaps,
+  generateHooks,
+  summarizeDeviceMix,
+} from "@slate/generator";
 import { logger } from "./logger.js";
+import type {
+  PipelineRuntime,
+  ArtifactEnvelope,
+  SegmentSummary,
+} from "./pipeline-types.js";
+import { generateQaReport } from "@slate/qa-service";
+import { generateExportManifest } from "@slate/exporter";
 
-const STAGE_DELAY_MS = Number(process.env.STAGE_DELAY_MS ?? 25);
+const OUTPUT_ROOT = process.env.SLATE_ARTIFACT_DIR ?? "/tmp/slate2";
 
-async function sleep(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
+export function registerPipeline(machine: RunStateMachine, runtime: PipelineRuntime) {
+  ensureOutputDir(runtime.context.runId);
+  const rng = createRng(runtime.seed);
 
-export function registerDefaultHandlers(machine: RunStateMachine) {
-  machine.registerHandler("scraping", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Scraping stage stub");
-    await sleep(STAGE_DELAY_MS);
+  machine.registerHandler("scraping", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Scraping stage");
+    ctx.updatedAt = new Date();
   });
 
-  machine.registerHandler("personas", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Personas stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
-
-  machine.registerHandler("segments", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Segments stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
-
-  machine.registerHandler("maps", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Message maps stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
-
-  machine.registerHandler("hooks", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Hooks stage stub");
-    await sleep(STAGE_DELAY_MS);
-    const sampleHook: HookRecord = {
+  machine.registerHandler("personas", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Generating personas");
+    const persona: PersonaRecord = {
       schema_version: schemaVersionLiteral,
-      hook_id: `${ctx.runId}-hook-1`,
-      segment_id: `${ctx.runId}-segment-1`,
-      device: "mobile",
-      hook_text: "Cut 32% off refill costs in 2 clicks\nProof: pricing#bundle",
-      proof_ref: "pricing#bundle",
-      novelty: 0.32,
-      min_distance: 0.41,
-      legal_risk: [],
+      persona_id: `${ctx.runId}-persona-1`,
+      name: "Ops Manager Mia",
+      jtbd: "Keep refill inventory stable without overbuying.",
+      context: "Runs weekly restocks for a wellness subscription brand.",
+      trigger: "Upcoming seasonal promotion spikes demand forecasts.",
+      blocker: "Manual spreadsheets hide low-stock variants.",
+      price_sensitivity: "medium",
+      confidence_level: Number((0.72 + rng() * 0.1).toFixed(2)),
+      evidence_refs: ["pdp#logistics", "faq#restock-window"],
+      weight: Number((0.33 + rng() * 0.2).toFixed(2)),
     };
 
-    const structureGate = enforceHookStructure(sampleHook);
-    if (!structureGate.ok) {
-      throw new Error(structureGate.reason);
-    }
-
-    const distanceGate = enforceDistance(
-      sampleHook.novelty,
-      sampleHook.min_distance,
-    );
-    if (!distanceGate.ok) {
-      throw new Error(distanceGate.reason);
-    }
+    appendJsonlArtifact(runtime, ctx.runId, "personas", [persona]);
   });
 
-  machine.registerHandler("briefs", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Briefs stage stub");
-    await sleep(STAGE_DELAY_MS);
+  machine.registerHandler("segments", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Scoring segments");
+    const baseScore = 0.78 + rng() * 0.05;
+    const segments: SegmentSummary[] = [
+      {
+        segment_id: `${ctx.runId}-segment-1`,
+        name: "Inventory Planners",
+        score: Number(baseScore.toFixed(2)),
+      },
+      {
+        segment_id: `${ctx.runId}-segment-2`,
+        name: "Fresh Subscribers",
+        score: Number((baseScore - 0.08).toFixed(2)),
+      },
+    ];
+    runtime.segments.splice(0, runtime.segments.length, ...segments);
+  });
 
-    const sampleBrief: BriefRecord = {
+  machine.registerHandler("maps", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Generating message maps");
+    // TODO: Implement message maps generation
+    const maps: any[] = [];
+    runtime.maps.splice(0, runtime.maps.length, ...maps);
+    appendJsonlArtifact(runtime, ctx.runId, "maps", maps);
+  });
+
+  machine.registerHandler("hooks", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Curating hooks");
+    // TODO: Implement hooks generation
+    const hooks: any[] = [];
+    runtime.hooks.splice(0, runtime.hooks.length, ...hooks);
+
+    for (const hook of hooks) {
+      const firstLineWordCount = hook.hook_text
+        .split("\n")[0]
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+      if (firstLineWordCount > STYLE_RULES.firstLineMaxWords) {
+        throw new Error("Generated hook violates first-line style rule");
+      }
+      if (hook.novelty < NOVELTY_FLOORS.copy) {
+        throw new Error("Generated hook violates novelty floor");
+      }
+      if (hook.min_distance < DISTANCE_THRESHOLDS.hook) {
+        throw new Error("Generated hook violates distance threshold");
+      }
+    }
+
+    appendJsonlArtifact(runtime, ctx.runId, "hooks", hooks);
+  });
+
+  machine.registerHandler("briefs", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Briefs stage (placeholder)");
+  });
+
+  machine.registerHandler("ssr", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Writing SSR config");
+    const config: SsrConfig = {
+      schema_version: schemaVersionLiteral,
+      anchor_sets_version: ctx.anchorSetVersion,
+      embedding_model: "text-embedding-3-small",
+      temperature: 1,
+      epsilon: 0,
+      sets: 6,
+    };
+    appendJsonArtifact(runtime, ctx.runId, "ssr_config", `${ctx.runId}-ssr_config.json`, config);
+  });
+
+  machine.registerHandler("creative", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Creative placeholder stage");
+  });
+
+  machine.registerHandler("qa", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "QA checks");
+    const qaArtifact = generateQaReport({
+      runId: ctx.runId,
+      hooks: runtime.hooks,
+    });
+    appendTextArtifact(runtime, ctx.runId, "qa_report", qaArtifact.filename, qaArtifact.body);
+  });
+
+  machine.registerHandler("pack", (ctx) => {
+    logger.debug({ runId: ctx.runId }, "Packaging assets");
+    const hook = runtime.hooks[0];
+    const segmentId =
+      runtime.segments[0]?.segment_id ?? `${ctx.runId}-segment-1`;
+    const manifestRecord: AssetsManifestRecord = {
       schema_version: schemaVersionLiteral,
       asset_id: `${ctx.runId}-asset-1`,
-      segment_id: `${ctx.runId}-segment-1`,
+      segment_id: segmentId,
       archetype: "problem-solution",
-      single_claim: "Refills ship in 2 days with tracked updates.",
-      proof_ref: "shipping#policy",
-      cta: "Plan your refill schedule",
-      placements: [
-        {
-          ratio: "9:16",
-          frames: [
-            "Stock stays topped at 32% longer",
-            "Tracked shipping hits in 2 days",
-          ],
-        },
-        {
-          ratio: "1:1",
-          frames: [
-            "See inventory count live",
-            "Pause or swap anytime",
-          ],
-        },
-        {
-          ratio: "4:5",
-          frames: [
-            "Share portal access",
-            "Restock with one click",
-          ],
-        },
-      ],
-      on_screen_text: [
-        "Refill planner in 60 seconds",
-        "Free swaps guaranteed",
-      ],
-      voiceover_short:
-        "Walk viewers through the refill portal, highlight shipping tracking, and close with the two-day guarantee.",
-      policy_flags: [],
-      accessibility_notes: "Overlay text meets WCAG AA contrast with safe margins.",
+      hook_id: hook?.hook_id ?? `${ctx.runId}-hook-1`,
+      ratio: "9:16",
+      variant: "A",
+      filename: "assets/demo-asset-1.mp4",
+      checksum: "sha256-demo-placeholder",
+      license_tag: "generated",
     };
+    appendJsonArtifact(
+      runtime,
+      ctx.runId,
+      "assets_manifest",
+      `${ctx.runId}-assets_manifest.json`,
+      manifestRecord,
+    );
 
-    const briefGate = enforceBrief(sampleBrief);
-    if (!briefGate.ok) {
-      throw new Error(briefGate.reason);
-    }
+    const exportManifest = generateExportManifest({
+      runId: ctx.runId,
+      artifacts: runtime.artifacts,
+    });
+    appendTextArtifact(
+      runtime,
+      ctx.runId,
+      "export_manifest",
+      exportManifest.filename,
+      exportManifest.body,
+    );
   });
+}
 
-  machine.registerHandler("ssr", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "SSR stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
+function ensureOutputDir(runId: string) {
+  const runDir = join(OUTPUT_ROOT, runId);
+  mkdirSync(runDir, { recursive: true });
+}
 
-  machine.registerHandler("creative", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Creative stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
+function createRng(seed: number) {
+  let value = Math.floor(seed) % 2147483647;
+  if (value <= 0) {
+    value += 2147483646;
+  }
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return value / 2147483647;
+  };
+}
 
-  machine.registerHandler("qa", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "QA stage stub");
-    await sleep(STAGE_DELAY_MS);
-    const coverageGate = enforceCoverage(0.81);
-    if (!coverageGate.ok) {
-      throw new Error(coverageGate.reason);
-    }
-  });
+function writeArtifact(
+  runtime: PipelineRuntime,
+  runId: string,
+  stage: RunStage,
+  artifactType: string,
+  filename: string,
+  contentType: string,
+  body: string,
+) {
+  const absolutePath = join(OUTPUT_ROOT, runId, filename);
+  writeFileSync(absolutePath, body, { encoding: "utf-8" });
+  const artifact: ArtifactEnvelope = {
+    stage,
+    artifactType,
+    filename,
+    contentType,
+    body,
+    absolutePath,
+  };
+  runtime.artifacts.push(artifact);
+  return artifact;
+}
 
-  machine.registerHandler("pack", async (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Pack stage stub");
-    await sleep(STAGE_DELAY_MS);
-  });
+function appendJsonlArtifact<T>(
+  runtime: PipelineRuntime,
+  runId: string,
+  artifactType: string,
+  records: T[],
+) {
+  const body = records.map((record) => JSON.stringify(record)).join("\n") + "\n";
+  writeArtifact(
+    runtime,
+    runId,
+    artifactStageForType(artifactType),
+    artifactType,
+    `${runId}-${artifactType}.jsonl`,
+    "application/jsonl",
+    body,
+  );
+}
+
+function appendJsonArtifact<T>(
+  runtime: PipelineRuntime,
+  runId: string,
+  artifactType: string,
+  filename: string,
+  record: T,
+) {
+  const body = `${JSON.stringify(record, null, 2)}\n`;
+  writeArtifact(
+    runtime,
+    runId,
+    artifactStageForType(artifactType),
+    artifactType,
+    filename,
+    "application/json",
+    body,
+  );
+}
+
+function appendTextArtifact(
+  runtime: PipelineRuntime,
+  runId: string,
+  artifactType: string,
+  filename: string,
+  body: string,
+) {
+  const normalizedBody = body.endsWith("\n") ? body : `${body}\n`;
+  writeArtifact(
+    runtime,
+    runId,
+    artifactStageForType(artifactType),
+    artifactType,
+    filename,
+    "text/plain",
+    normalizedBody,
+  );
+}
+
+function artifactStageForType(artifactType: string): RunStage {
+  switch (artifactType) {
+    case "personas":
+      return "personas";
+    case "maps":
+      return "maps";
+    case "hooks":
+      return "hooks";
+    case "hooks_device_mix":
+      return "hooks";
+    case "ssr_config":
+      return "ssr";
+    case "qa_report":
+      return "qa";
+    case "assets_manifest":
+    case "export_manifest":
+      return "pack";
+    default:
+      return "creative";
+  }
 }

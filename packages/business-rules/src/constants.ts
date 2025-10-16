@@ -24,6 +24,10 @@ export const NOVELTY_FLOORS = {
   copy: 0.18,
 };
 
+export const STYLE_RULES = {
+  firstLineMaxWords: 9,
+};
+
 export const COVERAGE_TARGET = 0.8;
 
 export const SEGMENT_CAPS = {
@@ -43,3 +47,20 @@ export const SSR_GATES = {
   fastTrackMean: 4.3,
   fastTrackEntropyMax: 1.2,
 };
+
+export const SEGMENT_RULES = {
+  MIN_SELECTED: 3,
+  MAX_SELECTED: 5,
+  MIN_CENTROID_GAP: 0.22,
+} as const;
+
+export const HOOK_RULES = {
+  MIN_PER_SEGMENT: 5,
+  DEVICES: [
+    "contrast",
+    "statistic",
+    "command",
+    "micro-story",
+    "objection-flip",
+  ] as const,
+} as const;

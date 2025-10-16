@@ -1,10 +1,10 @@
-import { Type, type Static } from "@sinclair/typebox";
+import { Type, type Static, type TSchema } from "@sinclair/typebox";
 import { schemaVersionLiteral } from "../schema-version.js";
 
 /**
  * Utility to wrap artifact payloads with the required schema metadata.
  */
-export function withSchemaVersion<T extends Record<string, unknown>>(schema: T) {
+export function withSchemaVersion<T extends TSchema>(schema: T) {
   return Type.Intersect([
     Type.Object({
       schema_version: Type.Literal(schemaVersionLiteral),
