@@ -31,6 +31,20 @@ export type StageProgress = {
   blockingReason?: string;
 };
 
+export type ScrapeRunStats = {
+  pagesCrawled: number;
+  totalTextBytes: number;
+  mediaCount: number;
+  blockedByRobots: number;
+  maxDepthReached: number;
+  durationMs: number;
+};
+
+export type ScrapeRunMetadata = {
+  thinSite: boolean;
+  stats: ScrapeRunStats;
+};
+
 export type RunContext = {
   runId: string;
   tenantId: string;
@@ -44,6 +58,7 @@ export type RunContext = {
   currentStage: RunStage;
   autopilotEnabled: boolean;
   stages: Map<RunStage, StageProgress>;
+  scrape?: ScrapeRunMetadata;
 };
 
 export type StageHandler = (
@@ -63,4 +78,5 @@ export type RunStateSnapshot = {
   currentStage: RunStage;
   stages: StageProgress[];
   autopilotEnabled: boolean;
+  scrape?: ScrapeRunMetadata;
 };

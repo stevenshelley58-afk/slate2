@@ -277,6 +277,9 @@ importers:
       '@slate/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
+      '@slate/scraper':
+        specifier: workspace:*
+        version: link:../scraper
       '@slate/state-machine':
         specifier: workspace:*
         version: link:../../packages/state-machine

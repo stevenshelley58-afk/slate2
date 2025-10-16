@@ -18,6 +18,7 @@
                          "@slate/business-rules":  "workspace:*",
                          "@slate/exporter":  "workspace:*",
                          "@slate/generator":  "workspace:*",
+                         "@slate/scraper":  "workspace:*",
                          "@slate/qa-service":  "workspace:*",
                          "@slate/state-machine":  "workspace:*",
                          "@slate/schemas":  "workspace:*",

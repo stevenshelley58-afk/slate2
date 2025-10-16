@@ -9,7 +9,7 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "test:integration": "node tests/integration/m5.export.mjs",
+    "test:integration": "node tests/integration/m0.scraper.mjs && node tests/integration/m5.export.mjs",
     "typecheck": "pnpm -r run typecheck",
     "dead": "ts-prune -p tsconfig.ts-prune.json"
   },

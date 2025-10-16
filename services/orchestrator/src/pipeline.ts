@@ -6,13 +6,21 @@ import {
   type PersonaRecord,
   type SsrConfig,
   type AssetsManifestRecord,
+  type HookRecord,
 } from "@slate/schemas";
 import {
   generateMessageMaps,
   generateHooks,
+  summarizeDeviceMix,
 } from "@slate/generator";
 import { runSSR, type SsrResult } from "@slate/andronoma-adapter";
-import { enforceSsr, type SsrMetrics } from "@slate/business-rules";
+import {
+  HOOK_RULES,
+  STYLE_RULES,
+  enforceSsr,
+  type SsrMetrics,
+} from "@slate/business-rules";
+import { runScraper } from "@slate/scraper";
 import { logger } from "./logger.js";
 import type {
   PipelineRuntime,
@@ -24,12 +32,64 @@ import { generateExportManifest } from "@slate/exporter";
 
 const OUTPUT_ROOT = process.env.SLATE_ARTIFACT_DIR ?? "/tmp/slate2";
 
+const THIN_SITE_SEGMENT_CAP = 1;
+const THIN_SITE_HOOK_CAP = 3;
+
 export function registerPipeline(machine: RunStateMachine, runtime: PipelineRuntime) {
   ensureOutputDir(runtime.context.runId);
   const rng = createRng(runtime.seed);
 
-  machine.registerHandler("scraping", (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Scraping stage");
+  machine.registerHandler("scraping", async (ctx) => {
+    logger.debug({ runId: ctx.runId, url: ctx.sourceUrl }, "Scraping stage");
+
+    const scrapeResult = await runScraper({
+      runId: ctx.runId,
+      entryUrl: ctx.sourceUrl,
+      rateLimitMs: 50,
+    });
+
+    appendJsonArtifact(
+      runtime,
+      ctx.runId,
+      "scrape_raw",
+      "scrape_raw.json",
+      scrapeResult.artifacts.scrapeRaw.data,
+    );
+    appendJsonlArtifact(
+      runtime,
+      ctx.runId,
+      "text_corpus",
+      scrapeResult.artifacts.textCorpus.records,
+    );
+    appendJsonArtifact(
+      runtime,
+      ctx.runId,
+      "media_index",
+      "media_index.json",
+      scrapeResult.artifacts.mediaIndex.data,
+    );
+    appendJsonArtifact(
+      runtime,
+      ctx.runId,
+      "crawl_log",
+      "crawl_log.json",
+      scrapeResult.artifacts.crawlLog.data,
+    );
+
+    ctx.scrape = {
+      thinSite: scrapeResult.thinSite,
+      stats: scrapeResult.stats,
+    };
+
+    logger.info(
+      {
+        runId: ctx.runId,
+        thinSite: scrapeResult.thinSite,
+        stats: scrapeResult.stats,
+      },
+      "Scrape completed",
+    );
+
     ctx.updatedAt = new Date();
   });
 
@@ -67,7 +127,17 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
         score: Number((baseScore - 0.08).toFixed(2)),
       },
     ];
-    runtime.segments.splice(0, runtime.segments.length, ...segments);
+    const thinSite = runtime.context.scrape?.thinSite ?? false;
+    const limitedSegments = thinSite
+      ? segments.slice(0, THIN_SITE_SEGMENT_CAP)
+      : segments;
+    runtime.segments.splice(0, runtime.segments.length, ...limitedSegments);
+    if (thinSite) {
+      logger.info(
+        { runId: ctx.runId, segments: limitedSegments.length },
+        "Thin-site mode: limiting segment selection",
+      );
+    }
   });
 
   machine.registerHandler("maps", (ctx) => {
@@ -87,19 +157,39 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
 
     const generatedHooks = generateHooks(runtime.segments, runtime.maps, runtime.seed);
 
-    // TODO: Implement hooks generation
-    const hooks: any[] = generatedHooks;
+    const thinSite = runtime.context.scrape?.thinSite ?? false;
+    let hooks = generatedHooks as HookRecord[];
+
+    const perSegmentCap = thinSite
+      ? Math.min(THIN_SITE_HOOK_CAP, HOOK_RULES.MIN_PER_SEGMENT)
+      : HOOK_RULES.MIN_PER_SEGMENT;
+
+    if (thinSite) {
+      const bySegment = new Map<string, HookRecord[]>();
+      for (const hook of hooks) {
+        const list = bySegment.get(hook.segment_id) ?? [];
+        list.push(hook);
+        bySegment.set(hook.segment_id, list);
+      }
+      hooks = runtime.segments.flatMap((segment) => {
+        const bucket = bySegment.get(segment.segment_id) ?? [];
+        return bucket.slice(0, perSegmentCap);
+      });
+      logger.info(
+        { runId: ctx.runId, hooks: hooks.length, cap: perSegmentCap },
+        "Thin-site mode: limiting hook catalog",
+      );
+    }
 
     runtime.hooks.splice(0, runtime.hooks.length, ...hooks);
 
-    for (const hook of hooks) {
+    for (const hook of runtime.hooks) {
       const firstLineWordCount = hook.hook_text
         .split("\n")[0]
         .trim()
         .split(/\s+/)
         .filter(Boolean).length;
-      // TODO: Add style rules validation when rules are available
-      if (firstLineWordCount > 10) { // placeholder
+      if (firstLineWordCount > STYLE_RULES.firstLineMaxWords) {
         throw new Error("Generated hook violates first-line style rule");
       }
       // TODO: Add novelty validation when rules are available
@@ -112,11 +202,10 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
       }
     }
 
-    appendJsonlArtifact(runtime, ctx.runId, "hooks", hooks);
+    appendJsonlArtifact(runtime, ctx.runId, "hooks", runtime.hooks);
 
-    // TODO: Implement device mix summary
-    const mixSummary: any[] = [];
-    const mixLines = mixSummary.map((entry: any) =>
+    const mixSummary = summarizeDeviceMix(runtime.hooks);
+    const mixLines = mixSummary.map((entry) =>
       `${entry.segment_id}: ${JSON.stringify(entry.counts)}`,
     );
     logger.info({ runId: ctx.runId, mix: mixSummary }, "Device mix per segment");
@@ -261,6 +350,8 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
     const qaArtifact = generateQaReport({
       runId: ctx.runId,
       hooks: runtime.hooks,
+      thinSite: runtime.context.scrape?.thinSite ?? false,
+      crawlStats: runtime.context.scrape?.stats,
     });
     appendTextArtifact(runtime, ctx.runId, "qa_report", qaArtifact.filename, qaArtifact.body);
   });
@@ -288,6 +379,9 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
         height: 1920,
       },
     };
+    if (runtime.context.scrape?.thinSite) {
+      manifestRecord.style_category = "thin-site";
+    }
     appendJsonArtifact(
       runtime,
       ctx.runId,
@@ -299,6 +393,8 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
     const exportManifest = generateExportManifest({
       runId: ctx.runId,
       artifacts: runtime.artifacts,
+      thinSite: runtime.context.scrape?.thinSite ?? false,
+      crawlStats: runtime.context.scrape?.stats,
     });
     appendTextArtifact(
       runtime,
@@ -407,6 +503,11 @@ function appendTextArtifact(
 
 function artifactStageForType(artifactType: string): RunStage {
   switch (artifactType) {
+    case "scrape_raw":
+    case "text_corpus":
+    case "media_index":
+    case "crawl_log":
+      return "scraping";
     case "personas":
       return "personas";
     case "maps":
