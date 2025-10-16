@@ -76,14 +76,24 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
 
   machine.registerHandler("maps", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Generating message maps");
+<<<<<<< HEAD
     const maps = generateMessageMaps(runtime.segments, runtime.seed);
+=======
+    // TODO: Implement message maps generation
+    const maps: any[] = [];
+>>>>>>> m3c-hooks
     runtime.maps.splice(0, runtime.maps.length, ...maps);
     appendJsonlArtifact(runtime, ctx.runId, "maps", maps);
   });
 
   machine.registerHandler("hooks", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Curating hooks");
+<<<<<<< HEAD
     const hooks = generateHooks(runtime.segments, runtime.maps, runtime.seed);
+=======
+    // TODO: Implement hooks generation
+    const hooks: any[] = [];
+>>>>>>> m3c-hooks
     runtime.hooks.splice(0, runtime.hooks.length, ...hooks);
 
     for (const hook of hooks) {
