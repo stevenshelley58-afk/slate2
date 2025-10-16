@@ -429,6 +429,8 @@ function artifactStageForType(artifactType: string): RunStage {
     case "hooks_device_mix":
       return "hooks";
     case "ssr_config":
+    case "ssr_results":
+    case "ssr_summary":
       return "ssr";
     case "qa_report":
       return "qa";
