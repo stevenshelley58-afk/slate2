@@ -111,6 +111,68 @@ fastify.get("/runs/:runId/artifacts", async (request, reply) => {
   }
 });
 
+fastify.get("/runs/:runId/ssr", async (request, reply) => {
+  const { runId } = request.params as { runId: string };
+  const snapshot = runStore.getRun(runId);
+  if (!snapshot) {
+    reply.status(404);
+    return { error: "Run not found" };
+  }
+
+  try {
+    // Get SSR artifacts
+    const ssrArtifacts = runStore.listArtifacts(runId, "ssr");
+    const summaryArtifact = ssrArtifacts.find(a => a.artifactType === "ssr_summary");
+    const resultsArtifact = ssrArtifacts.find(a => a.artifactType === "ssr_results");
+    
+    if (!summaryArtifact) {
+      reply.status(404);
+      return { error: "SSR results not available for this run" };
+    }
+    
+    const summary = JSON.parse(summaryArtifact.body);
+    const results = resultsArtifact ? 
+      resultsArtifact.body.trim().split('\n').map(line => JSON.parse(line)) : [];
+    
+    return {
+      run_id: runId,
+      anchor_set_version: snapshot.anchorSetVersion,
+      andronoma_request_id: `andronoma-${runId}-${Date.now()}`,
+      thresholds: {
+        relevance_mean_min: SSR_GATES.relevanceMeanMin,
+        ks_min: SSR_GATES.ksMin,
+        entropy_min: SSR_GATES.entropyMin,
+        entropy_coverage: SSR_GATES.entropyCoverage,
+        bimodal_share: SSR_GATES.bimodalShare,
+        separation_min: SSR_GATES.separationMin,
+      },
+      summary: {
+        total_combinations: summary.total_combinations,
+        passed_gates: summary.passed_gates,
+        pass_rate: summary.pass_rate,
+      },
+      results: results.map((result: any) => ({
+        persona_id: result.persona_id,
+        hook_id: result.hook_id,
+        relevance_mean: result.metrics?.relevanceMean,
+        ks_score: result.metrics?.ks,
+        entropy_score: result.metrics?.entropy,
+        bimodal_share: result.metrics?.bimodalShare,
+        separation_score: result.metrics?.separation,
+        purchase_intent_mean: result.result?.mean,
+        purchase_intent_high_mass: result.result?.bimodal,
+        fast_track_mean: result.result?.mean,
+        fast_track_entropy: result.result?.entropy,
+        validation_status: result.gate_evaluation?.ok ? "passed" : "failed",
+        gate_evaluation: result.gate_evaluation,
+      }))
+    };
+  } catch (error) {
+    reply.status(500);
+    return { error: (error as Error).message };
+  }
+});
+
 fastify.get("/segments", async (request, reply) => {
   const { run_id: runId } = request.query as { run_id?: string };
   if (!runId) {
