@@ -9,7 +9,8 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "pnpm -r run typecheck",
+    "dead": "ts-prune -p tsconfig.ts-prune.json"
   },
   "workspaces": [
     "apps/*",

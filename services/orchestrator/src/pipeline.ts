@@ -7,16 +7,10 @@ import {
   type SsrConfig,
   type AssetsManifestRecord,
 } from "@slate/schemas";
-// import {
-//   STYLE_RULES,
-//   NOVELTY_FLOORS,
-//   DISTANCE_THRESHOLDS,
-// } from "@slate/business-rules";
-// import {
-//   generateMessageMaps,
-//   generateHooks,
-//   summarizeDeviceMix,
-// } from "@slate/generator";
+import {
+  generateMessageMaps,
+  generateHooks,
+} from "@slate/generator";
 import { logger } from "./logger.js";
 import type {
   PipelineRuntime,
@@ -77,10 +71,10 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
   machine.registerHandler("maps", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Generating message maps");
 
-    const maps = generateMessageMaps(runtime.segments, runtime.seed);
+    const generatedMaps = generateMessageMaps(runtime.segments, runtime.seed);
 
     // TODO: Implement message maps generation
-    const maps: any[] = [];
+    const maps: any[] = generatedMaps;
 
     runtime.maps.splice(0, runtime.maps.length, ...maps);
     appendJsonlArtifact(runtime, ctx.runId, "maps", maps);
@@ -89,10 +83,10 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
   machine.registerHandler("hooks", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Curating hooks");
 
-    const hooks = generateHooks(runtime.segments, runtime.maps, runtime.seed);
+    const generatedHooks = generateHooks(runtime.segments, runtime.maps, runtime.seed);
 
     // TODO: Implement hooks generation
-    const hooks: any[] = [];
+    const hooks: any[] = generatedHooks;
 
     runtime.hooks.splice(0, runtime.hooks.length, ...hooks);
 
