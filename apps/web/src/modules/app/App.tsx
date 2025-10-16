@@ -2,6 +2,8 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RunTimeline } from "../runs/RunTimeline";
 import { SsrGatesView } from "../runs/SsrGatesView.js";
+import { ExportView } from "./ExportView.js";
+import { OwnerDashboard } from "./OwnerDashboard.js";
 
 export function App() {
   return (
@@ -24,6 +26,8 @@ export function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/runs/:runId" element={<RunTimelinePage />} />
             <Route path="/runs/:runId/ssr" element={<SsrGatesPage />} />
+            <Route path="/runs/:runId/export" element={<ExportViewPage />} />
+            <Route path="/owner" element={<OwnerDashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -91,6 +95,36 @@ function HomePage() {
               View SSR Gates
             </a>
           </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Export View
+            </h2>
+            <p className="text-gray-600 mb-4">
+              View coverage meter and export caps for a specific run.
+            </p>
+            <a
+              href="/runs/demo-run-123/export"
+              className="inline-block bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 transition-colors"
+            >
+              View Export Metrics
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Owner Dashboard
+            </h2>
+            <p className="text-gray-600 mb-4">
+              View KPIs including KS median, entropy pass %, novelty %, coverage %, and export success.
+            </p>
+            <a
+              href="/owner"
+              className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+            >
+              View Owner Dashboard
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -102,4 +136,11 @@ function RunTimelinePage() {
   const runId = window.location.pathname.split('/runs/')[1] || 'demo-run-123';
   
   return <RunTimeline runId={runId} />;
+}
+
+function ExportViewPage() {
+  // Extract runId from URL - in a real app, this would come from useParams
+  const runId = window.location.pathname.split('/runs/')[1]?.split('/export')[0] || 'demo-run-123';
+  
+  return <ExportView runId={runId} />;
 }

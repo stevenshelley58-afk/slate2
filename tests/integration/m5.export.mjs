@@ -36,7 +36,7 @@ const TEST_RUN_ID = "test-run-m5e-001";
 
 // Mock test data that meets variance requirements
 const mockAssetsManifest = [
-  // Segment 1 - Efficiency Seekers (4 archetypes × 4 ratios = 16 assets)
+  // Segment 1 - Efficiency Seekers (3 archetypes × 4 ratios = 12 assets)
   { segment_id: "efficiency-seekers", archetype: "photorealistic", hook_id: "hook-1", ratio: "9:16", variant: "v1", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
   { segment_id: "efficiency-seekers", archetype: "photorealistic", hook_id: "hook-1", ratio: "1:1", variant: "v1", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
   { segment_id: "efficiency-seekers", archetype: "photorealistic", hook_id: "hook-1", ratio: "4:5", variant: "v1", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
@@ -51,13 +51,8 @@ const mockAssetsManifest = [
   { segment_id: "efficiency-seekers", archetype: "minimalist", hook_id: "hook-3", ratio: "1:1", variant: "v3", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
   { segment_id: "efficiency-seekers", archetype: "minimalist", hook_id: "hook-3", ratio: "4:5", variant: "v3", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
   { segment_id: "efficiency-seekers", archetype: "minimalist", hook_id: "hook-3", ratio: "16:9", variant: "v3", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
-  
-  { segment_id: "efficiency-seekers", archetype: "bold", hook_id: "hook-4", ratio: "9:16", variant: "v4", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
-  { segment_id: "efficiency-seekers", archetype: "bold", hook_id: "hook-4", ratio: "1:1", variant: "v4", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
-  { segment_id: "efficiency-seekers", archetype: "bold", hook_id: "hook-4", ratio: "4:5", variant: "v4", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
-  { segment_id: "efficiency-seekers", archetype: "bold", hook_id: "hook-4", ratio: "16:9", variant: "v4", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
 
-  // Segment 2 - Quality Focused (2 archetypes × 4 ratios = 8 assets)
+  // Segment 2 - Quality Focused (3 archetypes × 4 ratios = 12 assets)
   { segment_id: "quality-focused", archetype: "photorealistic", hook_id: "hook-5", ratio: "9:16", variant: "v5", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
   { segment_id: "quality-focused", archetype: "photorealistic", hook_id: "hook-5", ratio: "1:1", variant: "v5", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
   { segment_id: "quality-focused", archetype: "photorealistic", hook_id: "hook-5", ratio: "4:5", variant: "v5", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
@@ -68,16 +63,26 @@ const mockAssetsManifest = [
   { segment_id: "quality-focused", archetype: "modern", hook_id: "hook-6", ratio: "4:5", variant: "v6", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
   { segment_id: "quality-focused", archetype: "modern", hook_id: "hook-6", ratio: "16:9", variant: "v6", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
 
-  // Segment 3 - Budget Conscious (2 archetypes × 4 ratios = 8 assets)
-  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-7", ratio: "9:16", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
-  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-7", ratio: "1:1", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
-  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-7", ratio: "4:5", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
-  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-7", ratio: "16:9", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
+  { segment_id: "quality-focused", archetype: "hand-drawn", hook_id: "hook-7", ratio: "9:16", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
+  { segment_id: "quality-focused", archetype: "hand-drawn", hook_id: "hook-7", ratio: "1:1", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
+  { segment_id: "quality-focused", archetype: "hand-drawn", hook_id: "hook-7", ratio: "4:5", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
+  { segment_id: "quality-focused", archetype: "hand-drawn", hook_id: "hook-7", ratio: "16:9", variant: "v7", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
+
+  // Segment 3 - Budget Conscious (3 archetypes × 4 ratios = 12 assets)
+  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-8", ratio: "9:16", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
+  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-8", ratio: "1:1", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
+  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-8", ratio: "4:5", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
+  { segment_id: "budget-conscious", archetype: "illustration", hook_id: "hook-8", ratio: "16:9", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
   
-  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-8", ratio: "9:16", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
-  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-8", ratio: "1:1", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
-  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-8", ratio: "4:5", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
-  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-8", ratio: "16:9", variant: "v8", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
+  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-9", ratio: "9:16", variant: "v9", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
+  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-9", ratio: "1:1", variant: "v9", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
+  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-9", ratio: "4:5", variant: "v9", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
+  { segment_id: "budget-conscious", archetype: "vintage", hook_id: "hook-9", ratio: "16:9", variant: "v9", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
+
+  { segment_id: "budget-conscious", archetype: "geometric", hook_id: "hook-10", ratio: "9:16", variant: "v10", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1920 } },
+  { segment_id: "budget-conscious", archetype: "geometric", hook_id: "hook-10", ratio: "1:1", variant: "v10", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1080 } },
+  { segment_id: "budget-conscious", archetype: "geometric", hook_id: "hook-10", ratio: "4:5", variant: "v10", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1080, height: 1350 } },
+  { segment_id: "budget-conscious", archetype: "geometric", hook_id: "hook-10", ratio: "16:9", variant: "v10", license_tag: "commercial", created_at: "2024-01-01T00:00:00Z", file_size: 1024, dimensions: { width: 1920, height: 1080 } },
 ];
 
 // Mock export artifacts
@@ -172,10 +177,10 @@ try {
   assert(photoArchetype["16:9"] === 1, "16:9 ratio count should be 1");
   
   console.log(`  ✅ Matrix structure valid`);
-  console.log(`  ✅ Efficiency-seekers: 4 archetypes × 4 ratios = 16 assets`);
-  console.log(`  ✅ Quality-focused: 2 archetypes × 4 ratios = 8 assets`);
-  console.log(`  ✅ Budget-conscious: 2 archetypes × 4 ratios = 8 assets`);
-  console.log(`  ✅ Total: 32 assets across 3 segments`);
+  console.log(`  ✅ Efficiency-seekers: 3 archetypes × 4 ratios = 12 assets`);
+  console.log(`  ✅ Quality-focused: 3 archetypes × 4 ratios = 12 assets`);
+  console.log(`  ✅ Budget-conscious: 3 archetypes × 4 ratios = 12 assets`);
+  console.log(`  ✅ Total: 36 assets across 3 segments`);
   
   passed++;
 } catch (error) {
