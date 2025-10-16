@@ -134,7 +134,107 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
   });
 
   machine.registerHandler("ssr", (ctx) => {
-    logger.debug({ runId: ctx.runId }, "Writing SSR config");
+    logger.debug({ runId: ctx.runId }, "Running SSR for persona×hook combinations");
+    
+    // Get personas and hooks from runtime
+    const personas = runtime.artifacts
+      .filter(a => a.artifactType === "personas" && a.stage === "personas")
+      .flatMap(a => JSON.parse(a.body.trim().split('\n')[0])); // Parse first line of JSONL
+    
+    const hooks = runtime.hooks;
+    
+    if (personas.length === 0) {
+      throw new Error("No personas available for SSR");
+    }
+    
+    if (hooks.length === 0) {
+      throw new Error("No hooks available for SSR");
+    }
+    
+    const ssrResults: any[] = [];
+    let totalCombinations = 0;
+    let passedGates = 0;
+    let anchorMismatchCount = 0;
+    
+    // Run SSR for each persona×hook combination
+    for (const persona of personas) {
+      for (const hook of hooks) {
+        totalCombinations++;
+        
+        try {
+          // Call the SSR adapter
+          const ssrResult = runSSR(persona, hook, runtime.seed, "mock");
+          
+          // Convert to SsrMetrics format for gate evaluation
+          const metrics: SsrMetrics = {
+            relevanceMean: ssrResult.mean,
+            ks: ssrResult.ks_score,
+            entropy: ssrResult.entropy,
+            entropyCoverageRatio: 1.0, // Assume 100% coverage for mock
+            bimodalShare: ssrResult.bimodal,
+            separation: ssrResult.separation,
+          };
+          
+          // Enforce SSR gates
+          const gateEvaluation = enforceSsr(metrics);
+          
+          const result = {
+            persona_id: persona.persona_id,
+            hook_id: hook.hook_id,
+            result: ssrResult,
+            gate_evaluation: gateEvaluation,
+            metrics: metrics
+          };
+          
+          ssrResults.push(result);
+          
+          if (gateEvaluation.ok) {
+            passedGates++;
+          } else {
+            logger.warn({ 
+              runId: ctx.runId, 
+              personaId: persona.persona_id, 
+              hookId: hook.hook_id,
+              reason: gateEvaluation.reason 
+            }, "SSR gate failed");
+          }
+          
+          // Check for anchor mismatch (409 error simulation)
+          if (ssrResult.mean < 1.0) { // Simulate anchor mismatch condition
+            anchorMismatchCount++;
+          }
+          
+        } catch (error) {
+          logger.error({ 
+            runId: ctx.runId, 
+            personaId: persona.persona_id, 
+            hookId: hook.hook_id,
+            error: error instanceof Error ? error.message : String(error)
+          }, "SSR execution failed");
+          
+          // Add failed result
+          ssrResults.push({
+            persona_id: persona.persona_id,
+            hook_id: hook.hook_id,
+            result: null,
+            gate_evaluation: { ok: false, reason: "SSR execution failed" },
+            metrics: null
+          });
+        }
+      }
+    }
+    
+    // Check for 409 anchor mismatch failure
+    if (anchorMismatchCount > 0) {
+      throw new Error(`409 anchor mismatch: ${anchorMismatchCount} combinations failed anchor validation`);
+    }
+    
+    const passRate = totalCombinations > 0 ? passedGates / totalCombinations : 0;
+    
+    // Store SSR results
+    appendJsonlArtifact(runtime, ctx.runId, "ssr_results", ssrResults);
+    
+    // Store SSR config
     const config: SsrConfig = {
       schema_version: schemaVersionLiteral,
       anchor_sets_version: ctx.anchorSetVersion,
@@ -144,6 +244,31 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
       sets: 6,
     };
     appendJsonArtifact(runtime, ctx.runId, "ssr_config", `${ctx.runId}-ssr_config.json`, config);
+    
+    // Store SSR summary
+    const summary = {
+      run_id: ctx.runId,
+      total_combinations: totalCombinations,
+      passed_gates: passedGates,
+      pass_rate: passRate,
+      anchor_mismatch_count: anchorMismatchCount,
+      thresholds: {
+        relevance_mean_min: 3.8,
+        ks_min: 0.85,
+        entropy_min: 1.2,
+        entropy_coverage: 0.7,
+        bimodal_share: 0.3,
+        separation_min: 0.15,
+      }
+    };
+    appendJsonArtifact(runtime, ctx.runId, "ssr_summary", `${ctx.runId}-ssr_summary.json`, summary);
+    
+    logger.info({ 
+      runId: ctx.runId, 
+      totalCombinations, 
+      passedGates, 
+      passRate: (passRate * 100).toFixed(1) + '%' 
+    }, "SSR stage completed");
   });
 
   machine.registerHandler("creative", (ctx) => {
