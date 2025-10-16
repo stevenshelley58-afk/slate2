@@ -1,9 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RunTimeline } from "../runs/RunTimeline";
-import { SsrGatesView } from "../runs/SsrGatesView";
-import { ExportView } from "./ExportView.js";
-import { OwnerDashboard } from "./OwnerDashboard.js";
 
 export function App() {
   return (
@@ -25,9 +22,6 @@ export function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/runs/:runId" element={<RunTimelinePage />} />
-            <Route path="/runs/:runId/ssr" element={<SsrGatesPage />} />
-            <Route path="/runs/:runId/export" element={<ExportViewPage />} />
-            <Route path="/owner" element={<OwnerDashboard />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -80,21 +74,6 @@ function HomePage() {
               </a>
             </div>
           </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              SSR Gates Analysis
-            </h2>
-            <p className="text-gray-600 mb-4">
-              View SSR quality gates and thresholds for statistical significance reporting.
-            </p>
-            <a
-              href="/runs/demo-run-123/ssr"
-              className="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-            >
-              View SSR Gates
-            </a>
-          </div>
         </div>
       </div>
     </div>
@@ -106,31 +85,4 @@ function RunTimelinePage() {
   const runId = window.location.pathname.split('/runs/')[1] || 'demo-run-123';
   
   return <RunTimeline runId={runId} />;
-}
-
-function ExportViewPage() {
-  // Extract runId from URL - in a real app, this would come from useParams
-  const runId = window.location.pathname.split('/runs/')[1]?.split('/export')[0] || 'demo-run-123';
-  
-  return <ExportView runId={runId} />;
-}
-
-function SsrGatesPage() {
-  // Extract runId from URL - in a real app, this would come from useParams
-  const runId = window.location.pathname.split('/runs/')[1]?.split('/ssr')[0] || 'demo-run-123';
-  
-  // Mock metrics for demonstration - in real app this would come from API
-  const mockMetrics = {
-    relevanceMean: 4.2,
-    ks: 0.92,
-    entropy: 1.45,
-    entropyCoverageRatio: 0.78,
-    bimodalShare: 0.35,
-    separation: 0.18,
-    purchaseIntentMean: 4.3,
-    purchaseIntentHighMass: 0.75,
-    fastTrack: true
-  };
-  
-  return <SsrGatesView runId={runId} metrics={mockMetrics} />;
 }
