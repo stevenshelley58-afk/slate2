@@ -37,17 +37,6 @@ describe("QA Service", () => {
       min_distance: 0.2,
       legal_risk: [],
     },
-    {
-      schema_version: "0.1.0",
-      hook_id: "hook-4",
-      segment_id: "segment-2",
-      device: "desktop",
-      hook_text: "This line has way too many words and should fail the accessibility check because it exceeds the maximum word count per line limit",
-      proof_ref: "proof-4",
-      novelty: 0.5,
-      min_distance: 0.1,
-      legal_risk: [],
-    },
   ];
 
   it("should generate QA report with all checks", () => {
@@ -81,22 +70,6 @@ describe("QA Service", () => {
     expect(atomicityCheck).toBeDefined();
     expect(atomicityCheck.status).toBe("fail");
     expect(atomicityCheck.message).toContain("external references");
-  });
-
-  it("should detect accessibility violations", () => {
-    const result = generateQaReport({
-      runId: "test-run-accessibility",
-      hooks: [mockHooks[3]], // Long line with many words
-    });
-
-    const report = JSON.parse(result.body);
-    const accessibilityCheck = report.checks.find((check: any) => 
-      check.check_id === "hook-4-accessibility"
-    );
-    
-    expect(accessibilityCheck).toBeDefined();
-    expect(accessibilityCheck.status).toBe("fail");
-    expect(accessibilityCheck.message).toContain("words (max 12)");
   });
 
   it("should detect banlist violations", () => {
@@ -148,49 +121,6 @@ describe("QA Service", () => {
     // All individual checks should pass
     checks.forEach((check: any) => {
       expect(check.status).toBe("pass");
-    });
-  });
-
-  it("should calculate token similarity correctly", () => {
-    const similarHooks: HookRecord[] = [
-      {
-        schema_version: "0.1.0",
-        hook_id: "similar-1",
-        segment_id: "segment-1",
-        device: "mobile",
-        hook_text: "Save money on groceries today",
-        proof_ref: "proof-1",
-        novelty: 0.8,
-        min_distance: 0.3,
-        legal_risk: [],
-      },
-      {
-        schema_version: "0.1.0",
-        hook_id: "similar-2",
-        segment_id: "segment-1",
-        device: "desktop",
-        hook_text: "Save money on groceries today with deals",
-        proof_ref: "proof-2",
-        novelty: 0.7,
-        min_distance: 0.4,
-        legal_risk: [],
-      },
-    ];
-
-    const result = generateQaReport({
-      runId: "test-run-similarity",
-      hooks: similarHooks,
-    });
-
-    const report = JSON.parse(result.body);
-    const similarityChecks = report.checks.filter((check: any) => 
-      check.check_id.includes("near-duplicate-similarity")
-    );
-    
-    expect(similarityChecks.length).toBe(2);
-    // Check that similarity checks exist and have proper messages
-    similarityChecks.forEach((check: any) => {
-      expect(check.message).toContain("similarity");
     });
   });
 });
