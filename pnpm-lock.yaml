@@ -283,6 +283,9 @@ importers:
       fastify:
         specifier: ^4.26.1
         version: 4.29.1
+      parquetjs-lite:
+        specifier: ^0.8.7
+        version: 0.8.7
       pino:
         specifier: ^9.0.0
         version: 9.13.1
@@ -1601,6 +1604,9 @@ packages:
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
+  int53@0.2.4:
+    resolution: {integrity: sha512-a5jlKftS7HUOhkUyYD7j2sJ/ZnvWiNlZS1ldR+g1ifQ+/UuZXIE+YTc/lK1qGj/GwAU5F8Z0e1eVq2t1J5Ob2g==}
+
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
@@ -1813,6 +1819,9 @@ packages:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  node-int64@0.3.3:
+    resolution: {integrity: sha512-bLdNOp5SYyqfDz/ssGHt2OTg8u+jEkCx4EoZIzprqeonFIUhlSBrKu40e/x6hIFYJx4ZEt64/9IZJyafvhGZrw==}
+
   node-releases@2.0.25:
     resolution: {integrity: sha512-4auku8B/vw5psvTiiN9j1dAOsXvMoGqJuKJcR+dTdqiXEK20mMTk1UEo3HS16LeGQsVG6+qKTPM9u/qQ2LqATA==}
 
@@ -1881,6 +1890,10 @@ packages:
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
+
+  parquetjs-lite@0.8.7:
+    resolution: {integrity: sha512-L0tdHzvy0btLJvAFZvjO0+ru+FL8tHPqiVE90KEnMy5jDqv+WmEy9Ii8SjiC+exAOi3RGyPYIdgJvFijYyEahA==}
+    engines: {node: '>=7.6'}
 
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
@@ -2159,6 +2172,9 @@ packages:
   slow-redact@0.3.2:
     resolution: {integrity: sha512-MseHyi2+E/hBRqdOi5COy6wZ7j7DxXRz9NkseavNYSvvWC06D8a5cidVZX3tcG5eCW3NIyVU4zT63hw0Q486jw==}
 
+  snappyjs@0.6.1:
+    resolution: {integrity: sha512-YIK6I2lsH072UE0aOFxxY1dPDCS43I5ktqHpeAsuLNYWkE5pGxRGWfDM4/vSUfNzXjC1Ivzt3qx31PCLmc9yqg==}
+
   sonic-boom@4.2.0:
     resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
 
@@ -2316,6 +2332,9 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
+
+  varint@5.0.2:
+    resolution: {integrity: sha512-lKxKYG6H03yCZUpAGOPOsMcGxd1RHCu1iKvEHYDPmTyq2HueGhD73ssNBqqQWfvYs04G9iUFRvmAVLW20Jw6ow==}
 
   vite-node@1.6.1:
     resolution: {integrity: sha512-YAXkfvGtuTzwWbDSACdJSg4A4DZiAqckWe90Zapc/sEX3XvHcw1NdurM/6od8J207tSDqNbSsgdCacBgvJKFuA==}
@@ -3640,6 +3659,8 @@ snapshots:
 
   inherits@2.0.4: {}
 
+  int53@0.2.4: {}
+
   ipaddr.js@1.9.1: {}
 
   is-binary-path@2.1.0:
@@ -3818,6 +3839,8 @@ snapshots:
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
 
+  node-int64@0.3.3: {}
+
   node-releases@2.0.25: {}
 
   normalize-path@3.0.0: {}
@@ -3882,6 +3905,13 @@ snapshots:
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
+
+  parquetjs-lite@0.8.7:
+    dependencies:
+      int53: 0.2.4
+      node-int64: 0.3.3
+      snappyjs: 0.6.1
+      varint: 5.0.2
 
   path-exists@4.0.0: {}
 
@@ -4145,6 +4175,8 @@ snapshots:
 
   slow-redact@0.3.2: {}
 
+  snappyjs@0.6.1: {}
+
   sonic-boom@4.2.0:
     dependencies:
       atomic-sleep: 1.0.0
@@ -4325,6 +4357,8 @@ snapshots:
       punycode: 2.3.1
 
   util-deprecate@1.0.2: {}
+
+  varint@5.0.2: {}
 
   vite-node@1.6.1(@types/node@20.19.21):
     dependencies:

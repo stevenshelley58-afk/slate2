@@ -8,6 +8,7 @@ export type ArtifactEnvelope = {
   contentType: string;
   body: string;
   absolutePath: string;
+  encoding: "utf-8" | "base64";
 };
 
 export type SegmentSummary = {

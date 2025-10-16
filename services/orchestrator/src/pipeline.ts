@@ -1,4 +1,4 @@
-﻿import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { RunStateMachine, type RunStage } from "@slate/state-machine";
 import {
@@ -11,7 +11,7 @@ import {
   generateMessageMaps,
   generateHooks,
 } from "@slate/generator";
-import { runSSR, type SsrResult } from "@slate/andronoma-adapter";
+import { runSSR } from "@slate/andronoma-adapter";
 import { enforceSsr, type SsrMetrics } from "@slate/business-rules";
 import { logger } from "./logger.js";
 import type {
@@ -21,6 +21,7 @@ import type {
 } from "./pipeline-types.js";
 import { generateQaReport } from "@slate/qa-service";
 import { generateExportManifest } from "@slate/exporter";
+import { ParquetSchema, ParquetWriter } from "parquetjs-lite";
 
 const OUTPUT_ROOT = process.env.SLATE_ARTIFACT_DIR ?? "/tmp/slate2";
 
@@ -133,99 +134,194 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
     logger.debug({ runId: ctx.runId }, "Briefs stage (placeholder)");
   });
 
-  machine.registerHandler("ssr", (ctx) => {
+  machine.registerHandler("ssr", async (ctx) => {
     logger.debug({ runId: ctx.runId }, "Running SSR for persona×hook combinations");
-    
-    // Get personas from artifacts
-    const personaArtifacts = runtime.artifacts.filter(a => a.artifactType === "personas");
+    logger.info(
+      { runId: ctx.runId, autopilotEnabled: ctx.autopilotEnabled },
+      ctx.autopilotEnabled
+        ? "SSR stage executing after autopilot resume"
+        : "SSR stage executing with manual override",
+    );
+
+    const personaArtifacts = runtime.artifacts.filter(
+      (artifact) => artifact.artifactType === "personas",
+    );
     if (personaArtifacts.length === 0) {
       throw new Error("No personas found for SSR stage");
     }
-    
+
     const personas: PersonaRecord[] = [];
     for (const artifact of personaArtifacts) {
-      const lines = artifact.body.trim().split('\n');
+      const lines = artifact.body.trim().split("\n");
       for (const line of lines) {
         if (line.trim()) {
           personas.push(JSON.parse(line));
         }
       }
     }
-    
-    // Run SSR for each persona×hook combination
-    const ssrResults: Array<{
+
+    const personaWeightFallback = personas.length > 0 ? 1 / personas.length : 1;
+    const responseRecords: Array<Record<string, unknown>> = [];
+    const pmfRows: Array<{
       persona_id: string;
       hook_id: string;
-      result: SsrResult;
-      gate_evaluation: { ok: boolean; reason?: string };
+      rating: number;
+      probability: number;
+      persona_weight: number;
+      weighted_probability: number;
     }> = [];
-    
-    let totalCombinations = 0;
-    let passedGates = 0;
-    
+    const csvRows = [
+      "persona_id,hook_id,ks,entropy,entropy_coverage,bimodal,separation,purchase_intent_mean,purchase_intent_high_mass,gate_ok",
+    ];
+    const separationRows = [
+      "| Persona | Hook | Top Rating | Top Probability | Runner-Up | Runner Probability | Separation |",
+      "| --- | --- | --- | --- | --- | --- | --- |",
+    ];
+    const failures: Array<{ persona_id: string; hook_id: string; reason: string }> = [];
+    const aggregatedWeighted = [0, 0, 0, 0, 0];
+
+    let totalWeight = 0;
+
     for (const persona of personas) {
       for (const hook of runtime.hooks) {
-        totalCombinations++;
-        
-        // Generate unique seed for this combination
-        const combinationSeed = runtime.seed + 
-          persona.persona_id.charCodeAt(0) + 
-          hook.hook_id.charCodeAt(0);
-        
-        // Run SSR
-        const ssrResult = runSSR(persona, hook, combinationSeed, "mock");
-        
-        // Convert to SsrMetrics format for gate evaluation
+        const personaWeight =
+          persona.weight > 0 ? persona.weight : personaWeightFallback;
+        totalWeight += personaWeight;
+
+        const combinationSeed =
+          runtime.seed ^
+          stableHash(`${persona.persona_id}::${hook.hook_id}`);
+
+        const ssrResult = runSSR(persona, hook, combinationSeed, "sim");
+
+        const coverage =
+          ssrResult.pmf.filter((value) => value >= 0.04).length /
+          ssrResult.pmf.length;
+        const purchaseIntentMass = ssrResult.pmf
+          .slice(2)
+          .reduce((sum, value) => sum + value, 0);
+        const purchaseIntentMean =
+          purchaseIntentMass === 0
+            ? 0
+            :
+              (3 * ssrResult.pmf[2] +
+                4 * ssrResult.pmf[3] +
+                5 * ssrResult.pmf[4]) /
+              purchaseIntentMass;
+        const purchaseIntentHighMass = ssrResult.pmf[4];
+
         const metrics: SsrMetrics = {
           relevanceMean: ssrResult.mean,
           ks: ssrResult.ks_score,
           entropy: ssrResult.entropy,
-          entropyCoverageRatio: 0.8, // Mock value - would be calculated from actual data
+          entropyCoverageRatio: coverage,
           bimodalShare: ssrResult.bimodal,
           separation: ssrResult.separation,
+          purchaseIntentMean,
+          purchaseIntentHighMass,
+          fastTrack: persona.weight >= 0.6,
         };
-        
-        // Evaluate gates
+
         const gateEvaluation = enforceSsr(metrics);
-        if (gateEvaluation.ok) {
-          passedGates++;
+        if (!gateEvaluation.ok && gateEvaluation.reason) {
+          failures.push({
+            persona_id: persona.persona_id,
+            hook_id: hook.hook_id,
+            reason: gateEvaluation.reason,
+          });
         }
-        
-        ssrResults.push({
-          persona_id: persona.persona_id,
-          hook_id: hook.hook_id,
-          result: ssrResult,
-          gate_evaluation: gateEvaluation,
-        });
-        
-        logger.debug({
-          runId: ctx.runId,
-          persona_id: persona.persona_id,
-          hook_id: hook.hook_id,
-          mean: ssrResult.mean,
-          ks: ssrResult.ks_score,
-          entropy: ssrResult.entropy,
-          gate_ok: gateEvaluation.ok,
-        }, "SSR result");
+
+        for (let i = 0; i < ssrResult.pmf.length; i += 1) {
+          const probability = ssrResult.pmf[i];
+          aggregatedWeighted[i] += probability * personaWeight;
+          pmfRows.push({
+            persona_id: persona.persona_id,
+            hook_id: hook.hook_id,
+            rating: i + 1,
+            probability: Number(probability.toFixed(6)),
+            persona_weight: Number(personaWeight.toFixed(6)),
+            weighted_probability: Number((probability * personaWeight).toFixed(6)),
+          });
+        }
+
+        for (const response of ssrResult.responses) {
+          responseRecords.push({
+            persona_id: persona.persona_id,
+            persona_weight: Number(personaWeight.toFixed(6)),
+            hook_id: hook.hook_id,
+            anchor_id: response.anchor_id,
+            response_id: response.response_id,
+            rating: response.rating,
+            probability: response.probability,
+            hkdf_seed: response.hkdf_seed,
+          });
+        }
+
+        const sorted = ssrResult.pmf
+          .map((probability, index) => ({ rating: index + 1, probability }))
+          .sort((a, b) => b.probability - a.probability);
+
+        csvRows.push(
+          [
+            persona.persona_id,
+            hook.hook_id,
+            metrics.ks.toFixed(4),
+            metrics.entropy.toFixed(4),
+            metrics.entropyCoverageRatio.toFixed(4),
+            metrics.bimodalShare.toFixed(4),
+            metrics.separation.toFixed(4),
+            (metrics.purchaseIntentMean ?? 0).toFixed(4),
+            (metrics.purchaseIntentHighMass ?? 0).toFixed(4),
+            gateEvaluation.ok ? "pass" : "fail",
+          ].join(","),
+        );
+
+        separationRows.push(
+          `| ${persona.persona_id} | ${hook.hook_id} | ${sorted[0].rating} | ${sorted[0].probability.toFixed(3)} | ${sorted[1].rating} | ${sorted[1].probability.toFixed(3)} | ${metrics.separation.toFixed(3)} |`,
+        );
+
+        logger.debug(
+          {
+            runId: ctx.runId,
+            persona_id: persona.persona_id,
+            hook_id: hook.hook_id,
+            metrics,
+            gate_ok: gateEvaluation.ok,
+          },
+          "SSR result",
+        );
       }
     }
-    
-    // Check if we have enough passing combinations
-    const passRate = passedGates / totalCombinations;
-    const minPassRate = 0.7; // Require 70% of combinations to pass gates
-    
-    if (passRate < minPassRate) {
-      const failedResults = ssrResults.filter(r => !r.gate_evaluation.ok);
-      const failureReasons = failedResults.map(r => r.gate_evaluation.reason).filter(Boolean);
-      
+
+    if (failures.length > 0) {
+      appendJsonArtifact(
+        runtime,
+        ctx.runId,
+        "failure",
+        `${ctx.runId}-ssr-failure.json`,
+        {
+          stage: "ssr",
+          failures,
+        },
+      );
       throw new Error(
-        `SSR gate failure: ${passedGates}/${totalCombinations} combinations passed gates. ` +
-        `Pass rate ${(passRate * 100).toFixed(1)}% below minimum ${(minPassRate * 100)}%. ` +
-        `Common failures: ${[...new Set(failureReasons)].slice(0, 3).join(', ')}`
+        `SSR gate failure: ${failures.length} combinations failed quality gates`,
       );
     }
-    
-    // Write SSR config
+
+    const aggregatedNormalised =
+      totalWeight > 0
+        ? aggregatedWeighted.map((value) => value / totalWeight)
+        : aggregatedWeighted;
+
+    logger.info(
+      {
+        runId: ctx.runId,
+        aggregatedPmf: aggregatedNormalised.map((value) => Number(value.toFixed(4))),
+      },
+      "Persona-weighted PMF computed",
+    );
+
     const config: SsrConfig = {
       schema_version: schemaVersionLiteral,
       anchor_sets_version: ctx.anchorSetVersion,
@@ -234,22 +330,35 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
       epsilon: 0,
       sets: 6,
     };
-    appendJsonArtifact(runtime, ctx.runId, "ssr_config", `${ctx.runId}-ssr_config.json`, config);
-    
-    // Write SSR results
-    appendJsonArtifact(runtime, ctx.runId, "ssr_results", `${ctx.runId}-ssr_results.json`, {
-      total_combinations: totalCombinations,
-      passed_gates: passedGates,
-      pass_rate: Number(passRate.toFixed(3)),
-      results: ssrResults,
-    });
-    
-    logger.info({
-      runId: ctx.runId,
-      totalCombinations,
-      passedGates,
-      passRate: Number(passRate.toFixed(3)),
-    }, "SSR stage completed");
+    appendJsonArtifact(
+      runtime,
+      ctx.runId,
+      "ssr_config",
+      `${ctx.runId}-ssr_config.json`,
+      config,
+    );
+
+    appendJsonlArtifact(runtime, ctx.runId, "ssr_responses", responseRecords);
+
+    await writePmfParquet(runtime, ctx.runId, pmfRows);
+
+    appendCsvArtifact(
+      runtime,
+      ctx.runId,
+      "ks_entropy",
+      `${ctx.runId}-ks_entropy.csv`,
+      csvRows,
+    );
+
+    appendMarkdownArtifact(
+      runtime,
+      ctx.runId,
+      "separation",
+      `${ctx.runId}-separation.md`,
+      separationRows.join("\n"),
+    );
+
+    logger.info({ runId: ctx.runId }, "SSR stage completed");
   });
 
   machine.registerHandler("creative", (ctx) => {
@@ -333,20 +442,34 @@ function writeArtifact(
   artifactType: string,
   filename: string,
   contentType: string,
-  body: string,
+  body: string | Buffer,
 ) {
   const absolutePath = join(OUTPUT_ROOT, runId, filename);
-  writeFileSync(absolutePath, body, { encoding: "utf-8" });
-  const artifact: ArtifactEnvelope = {
-    stage,
-    artifactType,
-    filename,
-    contentType,
-    body,
-    absolutePath,
-  };
-  runtime.artifacts.push(artifact);
-  return artifact;
+  if (typeof body === "string") {
+    writeFileSync(absolutePath, body, { encoding: "utf-8" });
+    registerArtifact(
+      runtime,
+      stage,
+      artifactType,
+      filename,
+      contentType,
+      body,
+      absolutePath,
+      "utf-8",
+    );
+  } else {
+    writeFileSync(absolutePath, body);
+    registerArtifact(
+      runtime,
+      stage,
+      artifactType,
+      filename,
+      contentType,
+      body.toString("base64"),
+      absolutePath,
+      "base64",
+    );
+  }
 }
 
 function appendJsonlArtifact<T>(
@@ -386,6 +509,45 @@ function appendJsonArtifact<T>(
   );
 }
 
+function appendCsvArtifact(
+  runtime: PipelineRuntime,
+  runId: string,
+  artifactType: string,
+  filename: string,
+  rows: string[],
+) {
+  const body = rows.join("\n");
+  const normalized = body.endsWith("\n") ? body : `${body}\n`;
+  writeArtifact(
+    runtime,
+    runId,
+    artifactStageForType(artifactType),
+    artifactType,
+    filename,
+    "text/csv",
+    normalized,
+  );
+}
+
+function appendMarkdownArtifact(
+  runtime: PipelineRuntime,
+  runId: string,
+  artifactType: string,
+  filename: string,
+  body: string,
+) {
+  const normalizedBody = body.endsWith("\n") ? body : `${body}\n`;
+  writeArtifact(
+    runtime,
+    runId,
+    artifactStageForType(artifactType),
+    artifactType,
+    filename,
+    "text/markdown",
+    normalizedBody,
+  );
+}
+
 function appendTextArtifact(
   runtime: PipelineRuntime,
   runId: string,
@@ -416,6 +578,11 @@ function artifactStageForType(artifactType: string): RunStage {
     case "hooks_device_mix":
       return "hooks";
     case "ssr_config":
+    case "ssr_responses":
+    case "ssr_pmf":
+    case "ks_entropy":
+    case "separation":
+    case "failure":
       return "ssr";
     case "qa_report":
       return "qa";
@@ -425,4 +592,81 @@ function artifactStageForType(artifactType: string): RunStage {
     default:
       return "creative";
   }
+}
+
+async function writePmfParquet(
+  runtime: PipelineRuntime,
+  runId: string,
+  rows: Array<{
+    persona_id: string;
+    hook_id: string;
+    rating: number;
+    probability: number;
+    persona_weight: number;
+    weighted_probability: number;
+  }>,
+) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  ensureOutputDir(runId);
+  const filename = `${runId}-ssr_pmf.parquet`;
+  const schema = new ParquetSchema({
+    persona_id: { type: "UTF8" },
+    hook_id: { type: "UTF8" },
+    rating: { type: "INT64" },
+    probability: { type: "DOUBLE" },
+    persona_weight: { type: "DOUBLE" },
+    weighted_probability: { type: "DOUBLE" },
+  });
+
+  const absolutePath = join(OUTPUT_ROOT, runId, filename);
+  const writer = await ParquetWriter.openFile(schema, absolutePath);
+  for (const row of rows) {
+    await writer.appendRow(row);
+  }
+  await writer.close();
+
+  const buffer = readFileSync(absolutePath);
+  registerArtifact(
+    runtime,
+    "ssr",
+    "ssr_pmf",
+    filename,
+    "application/x-parquet",
+    buffer.toString("base64"),
+    absolutePath,
+    "base64",
+  );
+}
+
+function registerArtifact(
+  runtime: PipelineRuntime,
+  stage: RunStage,
+  artifactType: string,
+  filename: string,
+  contentType: string,
+  body: string,
+  absolutePath: string,
+  encoding: "utf-8" | "base64",
+) {
+  const artifact: ArtifactEnvelope = {
+    stage,
+    artifactType,
+    filename,
+    contentType,
+    body,
+    absolutePath,
+    encoding,
+  };
+  runtime.artifacts.push(artifact);
+}
+
+function stableHash(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
 }
