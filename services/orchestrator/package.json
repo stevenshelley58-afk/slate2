@@ -15,6 +15,9 @@
   "dependencies": {
     "@slate/api-types": "workspace:*",
     "@slate/business-rules": "workspace:*",
+    "@slate/exporter": "workspace:*",
+    "@slate/generator": "workspace:*",
+    "@slate/qa-service": "workspace:*",
     "@slate/state-machine": "workspace:*",
     "@slate/schemas": "workspace:*",
     "fastify": "^4.26.1",

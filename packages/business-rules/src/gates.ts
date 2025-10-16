@@ -7,6 +7,7 @@ import {
   BANLIST_TERMS,
   DISTANCE_THRESHOLDS,
   NOVELTY_FLOORS,
+  STYLE_RULES,
   COVERAGE_TARGET,
   SEGMENT_CAPS,
   SSR_GATES,
@@ -34,8 +35,11 @@ export function enforceHookStructure(hook: HookRecord): GateEvaluation {
   const [firstLine, ...rest] = hook.hook_text.split("\n");
   const firstLineWords = firstLine.trim().split(/\s+/);
 
-  if (firstLineWords.length > 9) {
-    return { ok: false, reason: "Line 1 exceeds 9-word cap" };
+  if (firstLineWords.length > STYLE_RULES.firstLineMaxWords) {
+    return {
+      ok: false,
+      reason: `Line 1 exceeds ${STYLE_RULES.firstLineMaxWords}-word cap`,
+    };
   }
 
   const remainingWords =

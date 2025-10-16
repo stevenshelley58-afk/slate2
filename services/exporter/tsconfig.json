@@ -2,11 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true
   },
   "include": ["src"],
   "references": [
     { "path": "../../packages/business-rules" },
-    { "path": "../../packages/schemas" }
+    { "path": "../../packages/schemas" },
+    { "path": "../../packages/state-machine" }
   ]
 }

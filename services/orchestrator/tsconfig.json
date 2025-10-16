@@ -2,12 +2,18 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true
   },
   "include": ["src"],
   "references": [
     { "path": "../../packages/state-machine" },
     { "path": "../../packages/business-rules" },
-    { "path": "../../packages/schemas" }
+    { "path": "../../packages/schemas" },
+    { "path": "../generator" },
+    { "path": "../qa" },
+    { "path": "../exporter" }
   ]
 }

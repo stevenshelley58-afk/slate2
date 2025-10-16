@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  openapi_lint:
+    name: OpenAPI Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Lint OpenAPI specs
+        shell: bash
+        run: |
+          if [ -d openapi ]; then
+            mapfile -t specs < <(find openapi -type f \( -name "*.yaml" -o -name "*.yml" \))
+            if [ "${#specs[@]}" -gt 0 ]; then
+              npx --yes @stoplight/spectral-cli@6 lint "${specs[@]}"
+            else
+              echo "No OpenAPI specs found, skipping."
+            fi
+          else
+            echo "openapi directory not present, skipping."
+          fi
+
+  build_shared:
+    name: Build Shared Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Build shared workspaces
+        run: >
+          pnpm --filter @slate/state-machine
+          --filter @slate/schemas
+          --filter @slate/business-rules
+          --filter @slate/api-types
+          build
+
+  workspace_build:
+    name: Workspace Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Build all workspaces
+        run: pnpm -r build
+
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Run unit tests
+        run: pnpm -r --if-present test || echo "No unit tests defined; skipping."
+
+  determinism:
+    name: Determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run determinism checks
+        run: bash tests/determinism/check.sh

@@ -1,12 +1,17 @@
 import Fastify from "fastify";
 import {
-  RunStateMachine,
   RUN_STAGES,
   type StageProgress,
   type RunStateSnapshot,
+  type RunStage,
 } from "@slate/state-machine";
 import { RunSummarySchema, RunStageLiteral } from "@slate/api-types";
-import { registerDefaultHandlers } from "./pipeline.js";
+import {
+  STYLE_RULES,
+  NOVELTY_FLOORS,
+  DISTANCE_THRESHOLDS,
+  SSR_GATES,
+} from "@slate/business-rules";
 import { InMemoryRunStore } from "./run-store.js";
 import { logger } from "./logger.js";
 
@@ -14,11 +19,7 @@ const fastify = Fastify({
   logger,
 });
 
-const runStore = new InMemoryRunStore(() => {
-  const machine = new RunStateMachine();
-  registerDefaultHandlers(machine);
-  return machine;
-});
+const runStore = new InMemoryRunStore();
 
 fastify.post("/runs", async (request, reply) => {
   const body = request.body as {
@@ -27,6 +28,7 @@ fastify.post("/runs", async (request, reply) => {
     locale?: string;
     currency?: string;
     autopilot_enabled?: boolean;
+    seed?: number;
   };
 
   if (!body?.url) {
@@ -34,14 +36,15 @@ fastify.post("/runs", async (request, reply) => {
     return { error: "url is required" };
   }
 
-  const snapshot = runStore.createRun({
+  const snapshot = await runStore.createRun({
     tenantId: body.tenant_id ?? "demo-tenant",
     url: body.url,
     anchorSetVersion: process.env.ANCHOR_SET_VERSION ?? "andronoma-2024-10-01",
     modelRevision: process.env.MODEL_REVISION ?? "responses-2024-09-30",
     locale: body.locale ?? "en-US",
     currency: body.currency ?? "USD",
-    autopilotEnabled: body.autopilot_enabled ?? true,
+    autopilotEnabled: body.autopilot_enabled ?? false,
+    seed: body.seed,
   });
 
   return serializeRun(snapshot);
@@ -72,9 +75,85 @@ fastify.get("/runs/:runId/stages", async (request, reply) => {
   };
 });
 
+fastify.get("/runs/:runId/artifacts", async (request, reply) => {
+  const { runId } = request.params as { runId: string };
+  const stageParam = (request.query as { stage?: string })?.stage;
+
+  let stage: RunStage | undefined;
+  if (stageParam) {
+    const parsed = RunStageLiteral.safeParse(stageParam);
+    if (!parsed.success) {
+      reply.status(400);
+      return { error: "Invalid stage parameter" };
+    }
+    stage = parsed.data;
+  }
+
+  try {
+    const artifacts = runStore.listArtifacts(runId, stage);
+    if (artifacts.length === 0) {
+      reply.status(404);
+      return { error: "No artifacts available for this run" };
+    }
+    return {
+      run_id: runId,
+      ...(stage ? { stage } : {}),
+      artifacts: artifacts.map((artifact) => ({
+        artifact_type: artifact.artifactType,
+        filename: artifact.filename,
+        content_type: artifact.contentType,
+        body: artifact.body,
+      })),
+    };
+  } catch (error) {
+    reply.status(404);
+    return { error: (error as Error).message };
+  }
+});
+
+fastify.get("/segments", async (request, reply) => {
+  const { run_id: runId } = request.query as { run_id?: string };
+  if (!runId) {
+    reply.status(400);
+    return { error: "run_id is required" };
+  }
+
+  try {
+    const segments = runStore.getSegments(runId);
+    return {
+      run_id: runId,
+      thresholds: {
+        style_rules: {
+          first_line_max_words: STYLE_RULES.firstLineMaxWords,
+        },
+        novelty: {
+          idea_floor: NOVELTY_FLOORS.idea,
+          copy_floor: NOVELTY_FLOORS.copy,
+        },
+        distance: {
+          hook: DISTANCE_THRESHOLDS.hook,
+          cross_run: DISTANCE_THRESHOLDS.cross_run,
+        },
+        ssr: {
+          relevance_mean_min: SSR_GATES.relevanceMeanMin,
+          ks_min: SSR_GATES.ksMin,
+          entropy_min: SSR_GATES.entropyMin,
+          entropy_coverage: SSR_GATES.entropyCoverage,
+          bimodal_share: SSR_GATES.bimodalShare,
+          separation_min: SSR_GATES.separationMin,
+        },
+      },
+      segments,
+    };
+  } catch (error) {
+    reply.status(404);
+    return { error: (error as Error).message };
+  }
+});
+
 fastify.post("/runs/:runId/resume", async (request, reply) => {
   const { runId } = request.params as { runId: string };
-  const body = request.body as { stage: RunStageLiteral };
+  const body = request.body as { stage: RunStage };
 
   if (!body?.stage || !RUN_STAGES.includes(body.stage)) {
     reply.status(400);

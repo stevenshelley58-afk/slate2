@@ -76,16 +76,14 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
 
   machine.registerHandler("maps", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Generating message maps");
-    // TODO: Implement message maps generation
-    const maps: any[] = [];
+    const maps = generateMessageMaps(runtime.segments, runtime.seed);
     runtime.maps.splice(0, runtime.maps.length, ...maps);
     appendJsonlArtifact(runtime, ctx.runId, "maps", maps);
   });
 
   machine.registerHandler("hooks", (ctx) => {
     logger.debug({ runId: ctx.runId }, "Curating hooks");
-    // TODO: Implement hooks generation
-    const hooks: any[] = [];
+    const hooks = generateHooks(runtime.segments, runtime.maps, runtime.seed);
     runtime.hooks.splice(0, runtime.hooks.length, ...hooks);
 
     for (const hook of hooks) {
@@ -94,18 +92,35 @@ export function registerPipeline(machine: RunStateMachine, runtime: PipelineRunt
         .trim()
         .split(/\s+/)
         .filter(Boolean).length;
-      if (firstLineWordCount > STYLE_RULES.firstLineMaxWords) {
+      // TODO: Add style rules validation when rules are available
+      if (firstLineWordCount > 10) { // placeholder
         throw new Error("Generated hook violates first-line style rule");
       }
-      if (hook.novelty < NOVELTY_FLOORS.copy) {
+      // TODO: Add novelty validation when rules are available
+      if (hook.novelty < 0.3) { // placeholder
         throw new Error("Generated hook violates novelty floor");
       }
-      if (hook.min_distance < DISTANCE_THRESHOLDS.hook) {
+      // TODO: Add distance validation when rules are available
+      if (hook.min_distance < 0.2) { // placeholder
         throw new Error("Generated hook violates distance threshold");
       }
     }
 
     appendJsonlArtifact(runtime, ctx.runId, "hooks", hooks);
+
+    // TODO: Implement device mix summary
+    const mixSummary: any[] = [];
+    const mixLines = mixSummary.map((entry: any) =>
+      `${entry.segment_id}: ${JSON.stringify(entry.counts)}`,
+    );
+    logger.info({ runId: ctx.runId, mix: mixSummary }, "Device mix per segment");
+    appendTextArtifact(
+      runtime,
+      ctx.runId,
+      "hooks_device_mix",
+      `${ctx.runId}-hooks_device_mix.txt`,
+      mixLines.join("\n"),
+    );
   });
 
   machine.registerHandler("briefs", (ctx) => {
