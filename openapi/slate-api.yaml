@@ -202,6 +202,26 @@ paths:
                           type: number
         "404":
           description: Run not found.
+  /runs/{run_id}/ssr:
+    get:
+      summary: Fetch SSR configuration and metrics for a run
+      description: Retrieves Server-Side Rendering configuration and per-cell validation metrics for a specific run, including KS thresholds, entropy thresholds, and detailed cell-level metrics.
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: SSR configuration with thresholds and per-cell metrics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SsrResponse"
+        "404":
+          description: Run not found or SSR not available.
 components:
   schemas:
     RunStage:
@@ -295,3 +315,94 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StageStatus"
+    SsrResponse:
+      type: object
+      required:
+        - run_id
+        - anchor_set_version
+        - andronoma_request_id
+        - ks_threshold
+        - entropy_threshold
+        - cells
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        anchor_set_version:
+          type: string
+          description: Version of the anchor sets used for SSR
+        andronoma_request_id:
+          type: string
+          description: Unique identifier for the Andronoma request
+        ks_threshold:
+          type: number
+          description: Kolmogorov-Smirnov threshold for SSR validation
+          example: 0.85
+        entropy_threshold:
+          type: number
+          description: Entropy threshold for SSR validation
+          example: 1.2
+        cells:
+          type: array
+          description: Per-cell SSR metrics and validation results
+          items:
+            type: object
+            required:
+              - cell_id
+              - relevance_mean
+              - ks_score
+              - entropy_score
+              - bimodal_share
+              - separation_score
+              - purchase_intent_mean
+              - purchase_intent_high_mass
+              - fast_track_mean
+              - fast_track_entropy
+              - validation_status
+            properties:
+              cell_id:
+                type: string
+                description: Unique identifier for the SSR cell
+              relevance_mean:
+                type: number
+                description: Mean relevance score for this cell
+                example: 4.2
+              ks_score:
+                type: number
+                description: Kolmogorov-Smirnov score for this cell
+                example: 0.89
+              entropy_score:
+                type: number
+                description: Entropy score for this cell
+                example: 1.4
+              bimodal_share:
+                type: number
+                description: Bimodal distribution share for this cell
+                example: 0.35
+              separation_score:
+                type: number
+                description: Separation score for this cell
+                example: 0.18
+              purchase_intent_mean:
+                type: number
+                description: Mean purchase intent score for this cell
+                example: 4.3
+              purchase_intent_high_mass:
+                type: number
+                description: High mass percentage for purchase intent
+                example: 0.72
+              fast_track_mean:
+                type: number
+                description: Fast track mean score for this cell
+                example: 4.5
+              fast_track_entropy:
+                type: number
+                description: Fast track entropy for this cell
+                example: 1.1
+              validation_status:
+                type: string
+                enum:
+                  - passed
+                  - failed
+                  - warning
+                description: Overall validation status for this cell
