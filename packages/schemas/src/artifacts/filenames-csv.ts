@@ -86,8 +86,4 @@ export const FilenamesCsvRecordSchema = withSchemaVersion(
 export const FilenamesCsvSchema = Type.Array(FilenamesCsvRecordSchema);
 
 export type FilenamesCsvRecord = ArtifactStatic<typeof FilenamesCsvRecordSchema>;
-<<<<<<< HEAD
 export type FilenamesCsv = FilenamesCsvRecord[];
-=======
-export type FilenamesCsv = FilenamesCsvRecord[];
->>>>>>> m5d-exporter

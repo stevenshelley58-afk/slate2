@@ -76,8 +76,4 @@ export const ImagePromptRecordSchema = withSchemaVersion(
 export const ImagePromptsSchema = Type.Array(ImagePromptRecordSchema);
 
 export type ImagePromptRecord = ArtifactStatic<typeof ImagePromptRecordSchema>;
-<<<<<<< HEAD
 export type ImagePrompts = ImagePromptRecord[];
-=======
-export type ImagePrompts = ImagePromptRecord[];
->>>>>>> m5d-exporter

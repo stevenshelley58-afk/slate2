@@ -101,8 +101,4 @@ export const IMAGE_VARIANCE = {
       "photograph",
     ] as const,
   },
-<<<<<<< HEAD
 } as const;
-=======
-} as const;
->>>>>>> m5d-exporter
