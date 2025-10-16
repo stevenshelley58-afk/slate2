@@ -9,6 +9,15 @@ type QaReportArtifact = {
 type QaCheckParams = {
   runId: string;
   hooks: HookRecord[];
+  thinSite?: boolean;
+  crawlStats?: {
+    pagesCrawled: number;
+    totalTextBytes: number;
+    mediaCount: number;
+    blockedByRobots: number;
+    maxDepthReached: number;
+    durationMs: number;
+  };
 };
 
 // Simple token similarity calculation using Jaccard similarity
@@ -244,10 +253,39 @@ export function generateQaReport(params: QaCheckParams): QaReportArtifact {
     });
   }
 
+  if (params.thinSite) {
+    const crawled = params.crawlStats?.pagesCrawled ?? 0;
+    const textBytes = params.crawlStats?.totalTextBytes ?? 0;
+    checks.push({
+      check_id: `${params.runId}-thin-site-mode`,
+      category: "policy",
+      status: "pass",
+      severity: "medium",
+      message: `Thin-site mode active after crawling ${crawled} page(s) and ${textBytes} bytes of text. Budgets constrained downstream.`,
+      evidence_refs: [],
+    });
+  }
+
   // Calculate overall status
   const failedChecks = checks.filter(check => check.status === "fail");
   const overallStatus = failedChecks.length === 0 ? "pass" : "fail";
-  
+
+  const summaryNotes: string[] = [];
+  if (overallStatus === "pass") {
+    summaryNotes.push(
+      "All hooks pass QA checks for atomicity, accessibility, banlist, similarity, legal tags, and thin-site compatibility.",
+    );
+  } else {
+    summaryNotes.push(`${failedChecks.length} check(s) failed. Review failing items for compliance issues.`);
+  }
+
+  if (params.thinSite) {
+    const crawled = params.crawlStats?.pagesCrawled ?? 0;
+    summaryNotes.push(
+      `Thin-site mode active (${crawled} page${crawled === 1 ? "" : "s"} indexed); downstream budgets enforced.`,
+    );
+  }
+
   const report: QaReport = {
     schema_version: schemaVersionLiteral,
     run_id: params.runId,
@@ -255,9 +293,7 @@ export function generateQaReport(params: QaCheckParams): QaReportArtifact {
     summary: {
       status: overallStatus,
       coverage: 1,
-      notes: overallStatus === "pass"
-        ? "All hooks pass QA checks for atomicity, accessibility, banlist, similarity, legal tags, and thin-site compatibility."
-        : `${failedChecks.length} check(s) failed. Review failing items for compliance issues.`,
+      notes: summaryNotes.join(" "),
     },
     checks,
   };

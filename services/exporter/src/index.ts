@@ -164,6 +164,15 @@ function generateChecksum(asset: AssetsManifestRecord): string {
 export function generateExportManifest(params: {
   runId: string;
   artifacts: ExportArtifact[];
+  thinSite?: boolean;
+  crawlStats?: {
+    pagesCrawled: number;
+    totalTextBytes: number;
+    mediaCount: number;
+    blockedByRobots: number;
+    maxDepthReached: number;
+    durationMs: number;
+  };
 }): { filename: string; body: string } {
   const header = `Slate export manifest for run ${params.runId}`;
   const lines = params.artifacts.map((artifact, index) => {
@@ -171,7 +180,18 @@ export function generateExportManifest(params: {
     return `${lineNumber}. [${artifact.stage}] ${artifact.artifactType} -> ${artifact.filename} (${artifact.contentType}) @ ${artifact.absolutePath}`;
   });
 
-  const body = [header, "=".repeat(header.length), ...lines].join("\n");
+  const metaLines: string[] = [];
+  if (params.thinSite) {
+    metaLines.push("Thin-site mode: active — downstream budgets constrained.");
+  }
+  if (params.crawlStats) {
+    metaLines.push(
+      `Crawl stats: ${params.crawlStats.pagesCrawled} page(s), ${params.crawlStats.totalTextBytes} text bytes, ${params.crawlStats.mediaCount} media asset(s).`,
+    );
+  }
+
+  const sections = [header, "=".repeat(header.length), ...metaLines, ...lines];
+  const body = sections.join("\n");
 
   return {
     filename: `${params.runId}-export-manifest.txt`,

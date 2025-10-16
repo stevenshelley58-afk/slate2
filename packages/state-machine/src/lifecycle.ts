@@ -177,6 +177,7 @@ export class RunStateMachine extends EventEmitter<LifecycleEvents> {
       currentStage: context.currentStage,
       autopilotEnabled: context.autopilotEnabled,
       stages: Array.from(context.stages.values()),
+      scrape: context.scrape,
     };
   }
 }
