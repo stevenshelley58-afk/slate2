@@ -88,4 +88,8 @@ if (!isDeterministic) {
   console.log("✅ Output is deterministic as required");
 }
 
+<<<<<<< HEAD
 console.log("\n🎯 Demo completed successfully!");
+=======
+console.log("\n🎯 Demo completed successfully!");
+>>>>>>> m5d-exporter

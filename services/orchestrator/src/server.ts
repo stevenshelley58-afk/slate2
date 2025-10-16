@@ -213,6 +213,44 @@ fastify.get("/segments", async (request, reply) => {
   }
 });
 
+fastify.get("/runs/:runId/ssr", async (request, reply) => {
+  const { runId } = request.params as { runId: string };
+  
+  try {
+    const artifacts = runStore.listArtifacts(runId, "ssr");
+    const ssrResults = artifacts.find(a => a.artifactType === "ssr_results");
+    
+    if (!ssrResults) {
+      reply.status(404);
+      return { error: "SSR results not found for this run" };
+    }
+    
+    const ssrData = JSON.parse(ssrResults.body);
+    
+    return {
+      run_id: runId,
+      thresholds: {
+        relevance_mean_min: SSR_GATES.relevanceMeanMin,
+        ks_min: SSR_GATES.ksMin,
+        entropy_min: SSR_GATES.entropyMin,
+        entropy_coverage: SSR_GATES.entropyCoverage,
+        bimodal_share: SSR_GATES.bimodalShare,
+        separation_min: SSR_GATES.separationMin,
+      },
+      summary: {
+        total_combinations: ssrData.total_combinations,
+        passed_gates: ssrData.passed_gates,
+        pass_rate: ssrData.pass_rate,
+      },
+      results: ssrData.results,
+    };
+  } catch (error) {
+    request.log.error({ err: error }, "Failed to get SSR results");
+    reply.status(404);
+    return { error: (error as Error).message };
+  }
+});
+
 fastify.post("/runs/:runId/resume", async (request, reply) => {
   const { runId } = request.params as { runId: string };
   const body = request.body as { stage: RunStage };

@@ -63,7 +63,11 @@ export function generateImagePrompts(
     
     for (let i = 0; i < 3; i++) {
       const variantType = VARIANT_TYPES[i];
+<<<<<<< HEAD
       const variantSeed = deriveSeed(hookSeed, `variant-${i}-${variantType}`);
+=======
+      const variantSeed = deriveSeed(hookSeed, `variant-${i}`);
+>>>>>>> m5d-exporter
       const variantRng = createRng(variantSeed);
       
       const variant = generateImagePromptVariant({
@@ -146,6 +150,7 @@ function generateStyleTokens(params: {
   // Add device-specific tokens
   const deviceTokens = getDeviceTokens(device);
   
+<<<<<<< HEAD
   // Create variant-specific token pools to ensure variety
   const variantSpecificTokens = {
     macro: ["intricate", "detailed", "crystal clear", "fine details", "sharp focus", "professional"],
@@ -168,6 +173,14 @@ function generateStyleTokens(params: {
   const uniqueTokens = [...new Set(allTokens)];
   const tokenCount = 6 + Math.floor(rng() * 3); // 6-8 tokens
   const selectedTokens = shuffleArray(rng, uniqueTokens).slice(0, tokenCount);
+=======
+  // Combine and select tokens ensuring variety
+  const allTokens = [...baseTokens, ...lightingTokens, ...deviceTokens];
+  
+  // Select 8-12 tokens to ensure ≥6 token difference between variants
+  const tokenCount = 8 + Math.floor(rng() * 5); // 8-12 tokens
+  const selectedTokens = shuffleArray(rng, allTokens).slice(0, tokenCount);
+>>>>>>> m5d-exporter
   
   return selectedTokens;
 }

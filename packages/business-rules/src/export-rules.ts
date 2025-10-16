@@ -150,4 +150,8 @@ export const EXPORT_RULES = {
       maxWarnings: 5,
     },
   },
+<<<<<<< HEAD
 } as const;
+=======
+} as const;
+>>>>>>> m5d-exporter
