@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RunTimeline } from "../runs/RunTimeline";
+import { SsrGatesView } from "../runs/SsrGatesView.js";
 
 export function App() {
   return (
@@ -22,6 +23,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/runs/:runId" element={<RunTimelinePage />} />
+            <Route path="/runs/:runId/ssr" element={<SsrGatesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
