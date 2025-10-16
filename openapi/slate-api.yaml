@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: Slate Orchestrator API
+  description: >
+    Contracts-first surface for orchestrating creative generation runs. All
+    responses are deterministic and validate against shared schema packages.
+  version: 0.1.0
+servers:
+  - url: https://api.example.com
+paths:
+  /runs/{run_id}:
+    get:
+      summary: Fetch run summary
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Run summary with current stage and autopilot status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunSummary"
+        "404":
+          description: Run not found.
+  /runs/{run_id}/stages:
+    get:
+      summary: Fetch stage history for a run
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Stage history listing timestamps and blocking reasons.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - run_id
+                  - stages
+                properties:
+                  run_id:
+                    type: string
+                    format: uuid
+                  stages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StageStatus"
+        "404":
+          description: Run not found.
+  /runs/{run_id}/artifacts:
+    get:
+      summary: Fetch generated artifacts for a run
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: stage
+          in: query
+          required: false
+          description: Optional stage filter (e.g. personas, hooks, ssr, qa, pack)
+          schema:
+            $ref: "#/components/schemas/RunStage"
+      responses:
+        "200":
+          description: Collection of artifacts stored for the run.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - run_id
+                  - artifacts
+                properties:
+                  run_id:
+                    type: string
+                    format: uuid
+                  stage:
+                    $ref: "#/components/schemas/RunStage"
+                  artifacts:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - artifact_type
+                        - filename
+                        - content_type
+                        - body
+                      properties:
+                        artifact_type:
+                          type: string
+                          examples:
+                            - personas
+                            - hooks
+                            - ssr_config
+                            - assets_manifest
+                        filename:
+                          type: string
+                        content_type:
+                          type: string
+                          examples:
+                            - application/json
+                            - application/jsonl
+                        body:
+                          type: string
+                          description: Raw text content of the artifact.
+        "404":
+          description: Run not found or no artifacts available.
+  /segments:
+    get:
+      summary: Fetch segments for a run
+      parameters:
+        - name: run_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Segment list with gate thresholds echoed for clients.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - run_id
+                  - thresholds
+                  - segments
+                properties:
+                  run_id:
+                    type: string
+                    format: uuid
+                  thresholds:
+                    type: object
+                    required:
+                      - style_rules
+                      - novelty
+                      - distance
+                      - ssr
+                    properties:
+                      style_rules:
+                        type: object
+                        properties:
+                          first_line_max_words:
+                            type: integer
+                      novelty:
+                        type: object
+                        properties:
+                          idea_floor:
+                            type: number
+                          copy_floor:
+                            type: number
+                      distance:
+                        type: object
+                        properties:
+                          hook:
+                            type: number
+                          cross_run:
+                            type: number
+                      ssr:
+                        type: object
+                        properties:
+                          relevance_mean_min:
+                            type: number
+                          ks_min:
+                            type: number
+                          entropy_min:
+                            type: number
+                          entropy_coverage:
+                            type: number
+                          bimodal_share:
+                            type: number
+                          separation_min:
+                            type: number
+                  segments:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - segment_id
+                        - name
+                        - score
+                      properties:
+                        segment_id:
+                          type: string
+                        name:
+                          type: string
+                        score:
+                          type: number
+        "404":
+          description: Run not found.
+components:
+  schemas:
+    RunStage:
+      type: string
+      enum:
+        - queued
+        - scraping
+        - personas
+        - segments
+        - maps
+        - hooks
+        - briefs
+        - ssr
+        - creative
+        - qa
+        - pack
+        - done
+        - failed
+    StageStatus:
+      type: object
+      required:
+        - stage
+        - status
+      properties:
+        stage:
+          $ref: "#/components/schemas/RunStage"
+        status:
+          type: string
+          enum:
+            - pending
+            - active
+            - blocked
+            - completed
+            - failed
+        gate:
+          $ref: "#/components/schemas/RunStage"
+        entered_at:
+          type: string
+          format: date-time
+          nullable: true
+        exited_at:
+          type: string
+          format: date-time
+          nullable: true
+        blocking_reason:
+          type: string
+          nullable: true
+    RunSummary:
+      type: object
+      required:
+        - run_id
+        - tenant_id
+        - anchor_set_version
+        - model_revision
+        - url
+        - locale
+        - currency
+        - created_at
+        - updated_at
+        - current_stage
+        - autopilot_enabled
+        - stages
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+        anchor_set_version:
+          type: string
+        model_revision:
+          type: string
+        url:
+          type: string
+          format: uri
+        locale:
+          type: string
+        currency:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        current_stage:
+          $ref: "#/components/schemas/RunStage"
+        autopilot_enabled:
+          type: boolean
+        stages:
+          type: array
+          items:
+            $ref: "#/components/schemas/StageStatus"

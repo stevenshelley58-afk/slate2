@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/api-types" },
+    { "path": "packages/schemas" },
+    { "path": "packages/business-rules" },
+    { "path": "packages/state-machine" }
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "skipLibCheck": true
+  }
+}

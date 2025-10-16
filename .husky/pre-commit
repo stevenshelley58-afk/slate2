@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+
+pnpm -r build
+
+if ! git diff --quiet -- packages; then
+  echo "Detected unstaged changes in /packages after build. Please commit regenerated artifacts." >&2
+  exit 1
+fi

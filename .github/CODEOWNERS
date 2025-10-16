@@ -1,0 +1,6 @@
+# Code owners for critical surfaces
+
+/openapi/ @me
+/schemas/ @me
+/packages/business-rules/ @me
+/packages/state-machine/ @me
